@@ -9,6 +9,8 @@
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "seed": "npm run seed --prefix server",
     "generate-thumbnails": "npm run generate-thumbnails --prefix server",
+    "svg-to-webp": "npm run svg-to-webp --prefix server",
+    "regenerate-thumbnails": "npm run regenerate-thumbnails --prefix server",
     "optimize-thumbnails": "npm run optimize-thumbnails --prefix server",
     "build": "npm run build --prefix client",
     "start": "npm run start --prefix server"

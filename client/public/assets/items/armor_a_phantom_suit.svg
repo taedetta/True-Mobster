@@ -21,6 +21,6 @@
   <rect width="1024" height="1024" fill="url(#spot_armor_a_phantom_suit)"/>
   <ellipse cx="512" cy="860" rx="320" ry="48" fill="url(#floor_armor_a_phantom_suit)"/>
   <ellipse cx="512" cy="870" rx="220" ry="28" fill="#000" opacity="0.45"/>
-  <g filter="url(#shadow_armor_a_phantom_suit)"><g transform="translate(512,500)"><path d="M-180,-160 L180,-160 L220,120 L120,200 L-120,200 L-220,120 Z" fill="#334155" stroke="#64748b" stroke-width="6"/><path d="M-60,-160 L60,-160 L60,200 L-60,200 Z" fill="#475569" opacity="0.8"/></g></g>
+  <g filter="url(#shadow_armor_a_phantom_suit)"><g transform="translate(512,500)"><path d="M-180,-200 L180,-200 L200,100 L100,240 L-100,240 L-200,100 Z" fill="#0f172a" stroke="#6366f1" stroke-width="6" opacity="0.95"/><path d="M-60,-200 L60,-200 L40,240 L-40,240 Z" fill="#312e81" opacity="0.5"/></g></g>
   <rect x="48" y="48" width="928" height="928" rx="56" fill="none" stroke="#c4b5fd" stroke-opacity="0.25" stroke-width="4"/>
 </svg>

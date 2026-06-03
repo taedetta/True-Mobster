@@ -21,6 +21,6 @@
   <rect width="1024" height="1024" fill="url(#spot_armor_a_riot_gear)"/>
   <ellipse cx="512" cy="860" rx="320" ry="48" fill="url(#floor_armor_a_riot_gear)"/>
   <ellipse cx="512" cy="870" rx="220" ry="28" fill="#000" opacity="0.45"/>
-  <g filter="url(#shadow_armor_a_riot_gear)"><g transform="translate(512,500)"><path d="M-180,-160 L180,-160 L220,120 L120,200 L-120,200 L-220,120 Z" fill="#334155" stroke="#64748b" stroke-width="6"/><path d="M-60,-160 L60,-160 L60,200 L-60,200 Z" fill="#475569" opacity="0.8"/></g></g>
+  <g filter="url(#shadow_armor_a_riot_gear)"><g transform="translate(512,470)"><ellipse cx="0" cy="40" rx="180" ry="200" fill="#1e3a8a" stroke="#64748b" stroke-width="8"/><rect x="-160" y="80" width="320" height="80" rx="20" fill="#1f2937"/><rect x="-120" y="-60" width="240" height="40" rx="8" fill="#111827" opacity="0.8"/></g></g>
   <rect x="48" y="48" width="928" height="928" rx="56" fill="none" stroke="#c4b5fd" stroke-opacity="0.25" stroke-width="4"/>
 </svg>

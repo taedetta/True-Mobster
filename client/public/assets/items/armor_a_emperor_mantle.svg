@@ -21,6 +21,6 @@
   <rect width="1024" height="1024" fill="url(#spot_armor_a_emperor_mantle)"/>
   <ellipse cx="512" cy="860" rx="320" ry="48" fill="url(#floor_armor_a_emperor_mantle)"/>
   <ellipse cx="512" cy="870" rx="220" ry="28" fill="#000" opacity="0.45"/>
-  <g filter="url(#shadow_armor_a_emperor_mantle)"><g transform="translate(512,500)"><path d="M-180,-160 L180,-160 L220,120 L120,200 L-120,200 L-220,120 Z" fill="#334155" stroke="#64748b" stroke-width="6"/><path d="M-60,-160 L60,-160 L60,200 L-60,200 Z" fill="#475569" opacity="0.8"/></g></g>
+  <g filter="url(#shadow_armor_a_emperor_mantle)"><g transform="translate(512,500)"><path d="M-200,-170 L200,-170 L240,90 L140,220 L-140,220 L-240,90 Z" fill="#854d0e" stroke="#fbbf24" stroke-width="8"/><path d="M0,-170 L80,220 L-80,220 Z" fill="#fde047" opacity="0.35"/><circle cx="0" cy="20" r="70" fill="#ca8a04" stroke="#fef3c7" stroke-width="6"/></g></g>
   <rect x="48" y="48" width="928" height="928" rx="56" fill="none" stroke="#fbbf24" stroke-opacity="0.25" stroke-width="4"/>
 </svg>

@@ -9,6 +9,8 @@
     "dev": "node --watch src/index.js",
     "seed": "node src/db/seed.js",
     "generate-thumbnails": "node scripts/generate-thumbnails.js",
+    "svg-to-webp": "node scripts/svg-to-webp.js",
+    "regenerate-thumbnails": "node scripts/generate-thumbnails.js && node scripts/svg-to-webp.js",
     "optimize-thumbnails": "node scripts/optimize-thumbnails.js"
   },
   "dependencies": {

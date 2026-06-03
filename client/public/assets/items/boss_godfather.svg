@@ -21,6 +21,6 @@
   <rect width="1024" height="1024" fill="url(#spot_boss_godfather)"/>
   <ellipse cx="512" cy="860" rx="320" ry="48" fill="url(#floor_boss_godfather)"/>
   <ellipse cx="512" cy="870" rx="220" ry="28" fill="#000" opacity="0.45"/>
-  <g filter="url(#shadow_boss_godfather)"><g transform="translate(512,480)"><ellipse cx="0" cy="60" rx="160" ry="180" fill="#1f2937" stroke="#fbbf24" stroke-width="5"/><circle cx="0" cy="-80" r="110" fill="#78716c"/><rect x="-100" y="-110" width="200" height="40" rx="8" fill="#111"/><circle cx="-35" cy="-85" r="12" fill="#111"/><circle cx="35" cy="-85" r="12" fill="#111"/></g></g>
+  <g filter="url(#shadow_boss_godfather)"><g transform="translate(512,480)"><ellipse cx="0" cy="80" rx="170" ry="190" fill="#854d0e" stroke="#fbbf24" stroke-width="6"/><circle cx="0" cy="-70" r="115" fill="#78716c"/><rect x="-110" y="-100" width="220" height="50" rx="10" fill="#111"/><circle cx="-40" cy="-75" r="14" fill="#111"/><circle cx="40" cy="-75" r="14" fill="#111"/><path d="M-30,120 L30,120 L20,200 L-20,200 Z" fill="#fbbf24"/></g></g>
   <rect x="48" y="48" width="928" height="928" rx="56" fill="none" stroke="#fbbf24" stroke-opacity="0.25" stroke-width="4"/>
 </svg>

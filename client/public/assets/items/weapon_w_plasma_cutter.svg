@@ -21,6 +21,6 @@
   <rect width="1024" height="1024" fill="url(#spot_weapon_w_plasma_cutter)"/>
   <ellipse cx="512" cy="860" rx="320" ry="48" fill="url(#floor_weapon_w_plasma_cutter)"/>
   <ellipse cx="512" cy="870" rx="220" ry="28" fill="#000" opacity="0.45"/>
-  <g filter="url(#shadow_weapon_w_plasma_cutter)"><g transform="translate(512,500)"><circle cx="0" cy="0" r="160" fill="#6366f1" stroke="#fbbf24" stroke-width="6" opacity="0.85"/></g></g>
+  <g filter="url(#shadow_weapon_w_plasma_cutter)"><g transform="translate(512,490) rotate(-15)"><rect x="-240" y="-18" width="360" height="36" rx="6" fill="#1e293b" stroke="#06b6d4" stroke-width="4"/><circle cx="140" cy="0" r="40" fill="#0891b2" filter="url(#glow_weapon_plasma)"/><path d="M-280,-80 L-200,80 L-160,-60 Z" fill="#22d3ee" opacity="0.8"/></g></g>
   <rect x="48" y="48" width="928" height="928" rx="56" fill="none" stroke="#fbbf24" stroke-opacity="0.25" stroke-width="4"/>
 </svg>

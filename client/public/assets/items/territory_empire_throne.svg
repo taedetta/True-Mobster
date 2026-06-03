@@ -21,6 +21,6 @@
   <rect width="1024" height="1024" fill="url(#spot_territory_empire_throne)"/>
   <ellipse cx="512" cy="860" rx="320" ry="48" fill="url(#floor_territory_empire_throne)"/>
   <ellipse cx="512" cy="870" rx="220" ry="28" fill="#000" opacity="0.45"/>
-  <g filter="url(#shadow_territory_empire_throne)"><g transform="translate(512,520)"><path d="M0,-200 C-120,-200 -180,-80 -180,20 C-180,120 0,220 0,220 C0,220 180,120 180,20 C180,-80 120,-200 0,-200 Z" fill="#6366f1" stroke="#fbbf24" stroke-width="5"/><circle cx="0" cy="20" r="56" fill="#fef3c7" opacity="0.9"/></g></g>
+  <g filter="url(#shadow_territory_empire_throne)"><g transform="translate(512,500)"><path d="M-200,-120 L200,-120 L240,80 L0,200 L-240,80 Z" fill="#ef4444" stroke="#fbbf24" stroke-width="8"/><circle cx="0" cy="20" r="60" fill="#fde047"/><path d="M0,-40 L20,20 L-20,20 Z" fill="#854d0e"/></g></g>
   <rect x="48" y="48" width="928" height="928" rx="56" fill="none" stroke="#94a3b8" stroke-opacity="0.25" stroke-width="4"/>
 </svg>

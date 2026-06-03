@@ -6,7 +6,7 @@ services:
     region: virginia
     branch: main
     repo: https://github.com/taedetta/True-Mobster
-    buildCommand: npm install && npm run install:all && cd client && npm install --include=dev && cd .. && THUMBNAIL_AI=0 npm run generate-thumbnails && npm run build
+    buildCommand: npm install && npm run install:all && cd client && npm install --include=dev && cd .. && THUMBNAIL_AI=0 npm run generate-thumbnails && FORCE=1 npm run svg-to-webp && npm run build
     startCommand: cd server && npm start
     healthCheckPath: /api/health
     envVars:
