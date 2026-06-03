@@ -78,9 +78,18 @@ export function GameProvider({ children }) {
     }
   }, [showMessage, socket]);
 
+  const gameGet = useCallback(async (path) => {
+    try {
+      return await api(`/game${path}`);
+    } catch (err) {
+      showMessage(err.message, 'error');
+      throw err;
+    }
+  }, [showMessage]);
+
   return (
     <GameContext.Provider value={{
-      state, catalog, loading, message, refresh, action, showMessage,
+      state, catalog, loading, message, refresh, action, gameGet, showMessage,
       setState,
     }}>
       {children}

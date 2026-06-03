@@ -25,3 +25,8 @@ export function formatTime(seconds) {
   const s = seconds % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
 }
+
+/** Authenticated GET to /api/game/* */
+export function gameGet(path) {
+  return api(`/game${path}`);
+}

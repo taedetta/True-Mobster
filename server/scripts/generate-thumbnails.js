@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import {
-  WEAPONS, ARMOR, VEHICLES, PROPERTIES, JOBS, LOCATIONS,
+  WEAPONS, ARMOR, VEHICLES, PROPERTIES, JOBS, LOCATIONS, CONSUMABLES, BOSSES, TERRITORIES,
 } from '../../shared/gameData.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -52,8 +52,11 @@ write('weapon', WEAPONS);
 write('armor', ARMOR);
 write('vehicle', VEHICLES);
 write('property', PROPERTIES);
+write('consumable', CONSUMABLES);
+write('boss', BOSSES);
+write('territory', TERRITORIES);
 write('job', JOBS.map((j) => ({ ...j, color: LOCATIONS.find((l) => l.id === j.location)?.color || '#6366f1', tier: 1 })));
 write('location', LOCATIONS.map((l) => ({ ...l, tier: 1 })));
 
-const total = WEAPONS.length + ARMOR.length + VEHICLES.length + PROPERTIES.length + JOBS.length + LOCATIONS.length;
+const total = WEAPONS.length + ARMOR.length + VEHICLES.length + PROPERTIES.length + CONSUMABLES.length + BOSSES.length + TERRITORIES.length + JOBS.length + LOCATIONS.length;
 console.log(`Done — ${total} thumbnails generated.`);

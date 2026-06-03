@@ -1,121 +1,217 @@
-/** True Mobsters — VisionIt Studio — shared game definitions (server is source of truth) */
+/** True Mobsters — VisionIt Studio — complete game definitions */
 
 export const STUDIO = 'VisionIt';
 export const GAME_NAME = 'True Mobsters';
 
-export const REGEN = {
-  energySeconds: 300,
-  staminaSeconds: 180,
-  healthSeconds: 600,
-};
-
+export const REGEN = { energySeconds: 300, staminaSeconds: 180, healthSeconds: 600 };
 export const LEVEL_XP = (level) => Math.floor(100 * Math.pow(level, 1.85));
-
-export const BASE_STATS = {
-  maxEnergy: 10,
-  maxStamina: 5,
-  maxHealth: 100,
-  attack: 1,
-  defense: 1,
-};
-
-export const STAT_GROWTH_PER_LEVEL = {
-  maxEnergy: 2,
-  maxStamina: 1,
-  maxHealth: 10,
-};
-
-export const SKILL_COST = 1;
-
-export const LOCATIONS = [
-  { id: 'downtown', name: 'Downtown', minLevel: 1, color: '#6366f1' },
-  { id: 'industrial', name: 'Industrial District', minLevel: 5, color: '#78716c' },
-  { id: 'waterfront', name: 'Waterfront', minLevel: 10, color: '#0ea5e9' },
-  { id: 'uptown', name: 'Uptown', minLevel: 20, color: '#a855f7' },
-  { id: 'casino_row', name: 'Casino Row', minLevel: 35, color: '#eab308' },
-  { id: 'skyline', name: 'Skyline Heights', minLevel: 50, color: '#f97316' },
-];
-
-export const JOBS = [
-  { id: 'pickpocket', location: 'downtown', name: 'Pickpocket Tourists', energy: 1, money: [25, 75], xp: 5, failRate: 0.05, jailMinutes: 2 },
-  { id: 'mug_alley', location: 'downtown', name: 'Mug Alley Runners', energy: 2, money: [50, 120], xp: 10, failRate: 0.08, jailMinutes: 3 },
-  { id: 'fence_goods', location: 'downtown', name: 'Fence Stolen Goods', energy: 3, money: [80, 180], xp: 15, failRate: 0.1, jailMinutes: 5 },
-  { id: 'warehouse_heist', location: 'industrial', name: 'Warehouse Heist', energy: 4, money: [150, 350], xp: 25, failRate: 0.12, jailMinutes: 8 },
-  { id: 'dock_smuggle', location: 'waterfront', name: 'Dock Smuggling', energy: 5, money: [300, 600], xp: 40, failRate: 0.15, jailMinutes: 10 },
-  { id: 'nightclub_shakedown', location: 'uptown', name: 'Nightclub Shakedown', energy: 6, money: [500, 900], xp: 55, failRate: 0.18, jailMinutes: 12 },
-  { id: 'casino_scam', location: 'casino_row', name: 'Casino Scam Ring', energy: 7, money: [800, 1400], xp: 75, failRate: 0.2, jailMinutes: 15 },
-  { id: 'penthouse_job', location: 'skyline', name: 'Penthouse Score', energy: 8, money: [1200, 2200], xp: 100, failRate: 0.22, jailMinutes: 20 },
-];
-
-export const WEAPONS = [
-  { id: 'rusty_knife', name: 'Rusty Knife', price: 500, attack: 2, minLevel: 1, tier: 1, color: '#94a3b8' },
-  { id: 'baseball_bat', name: 'Baseball Bat', price: 1500, attack: 5, minLevel: 3, tier: 1, color: '#b45309' },
-  { id: 'switchblade', name: 'Switchblade', price: 3500, attack: 8, minLevel: 5, tier: 2, color: '#64748b' },
-  { id: 'revolver', name: 'Street Revolver', price: 8000, attack: 12, minLevel: 8, tier: 2, color: '#475569' },
-  { id: 'shotgun', name: 'Sawed-Off Shotgun', price: 18000, attack: 18, minLevel: 12, tier: 3, color: '#78350f' },
-  { id: 'smg', name: 'Compact SMG', price: 35000, attack: 25, minLevel: 18, tier: 3, color: '#1e293b' },
-  { id: 'assault_rifle', name: 'Assault Rifle', price: 75000, attack: 35, minLevel: 25, tier: 4, color: '#14532d' },
-  { id: 'sniper', name: 'Long-Range Sniper', price: 150000, attack: 48, minLevel: 35, tier: 4, color: '#312e81' },
-  { id: 'golden_pistol', name: 'Golden Pistol', price: 300000, attack: 65, minLevel: 45, tier: 5, color: '#ca8a04' },
-  { id: 'boss_cannon', name: 'Boss Cannon', price: 600000, attack: 90, minLevel: 60, tier: 5, color: '#7f1d1d' },
-];
-
-export const ARMOR = [
-  { id: 'leather_jacket', name: 'Leather Jacket', price: 800, defense: 2, minLevel: 1, tier: 1, color: '#44403c' },
-  { id: 'kevlar_vest', name: 'Kevlar Vest', price: 2500, defense: 5, minLevel: 4, tier: 1, color: '#57534e' },
-  { id: 'street_helmet', name: 'Street Helmet', price: 6000, defense: 9, minLevel: 7, tier: 2, color: '#334155' },
-  { id: 'tactical_vest', name: 'Tactical Vest', price: 14000, defense: 14, minLevel: 11, tier: 2, color: '#166534' },
-  { id: 'riot_gear', name: 'Riot Gear', price: 30000, defense: 20, minLevel: 16, tier: 3, color: '#1e3a8a' },
-  { id: 'ballistic_suit', name: 'Ballistic Suit', price: 65000, defense: 28, minLevel: 22, tier: 3, color: '#374151' },
-  { id: 'elite_armor', name: 'Elite Body Armor', price: 120000, defense: 38, minLevel: 30, tier: 4, color: '#581c87' },
-  { id: 'warlord_plate', name: 'Warlord Plate', price: 250000, defense: 52, minLevel: 40, tier: 4, color: '#713f12' },
-  { id: 'phantom_suit', name: 'Phantom Suit', price: 450000, defense: 70, minLevel: 52, tier: 5, color: '#0f172a' },
-  { id: 'empire_guard', name: 'Empire Guard Set', price: 800000, defense: 95, minLevel: 65, tier: 5, color: '#991b1b' },
-];
-
-export const VEHICLES = [
-  { id: 'beaten_sedan', name: 'Beaten Sedan', price: 2000, defense: 1, minLevel: 2, tier: 1, color: '#71717a' },
-  { id: 'muscle_car', name: 'Muscle Car', price: 12000, defense: 3, minLevel: 8, tier: 2, color: '#dc2626' },
-  { id: 'armored_suv', name: 'Armored SUV', price: 45000, defense: 6, minLevel: 15, tier: 3, color: '#1f2937' },
-  { id: 'speedboat', name: 'Speedboat', price: 90000, defense: 8, minLevel: 22, tier: 3, color: '#0284c7' },
-  { id: 'limousine', name: 'Executive Limo', price: 180000, defense: 12, minLevel: 30, tier: 4, color: '#18181b' },
-  { id: 'helicopter', name: 'Private Helicopter', price: 400000, defense: 18, minLevel: 42, tier: 4, color: '#0369a1' },
-  { id: 'yacht', name: 'Luxury Yacht', price: 750000, defense: 25, minLevel: 55, tier: 5, color: '#f5f5f4' },
-  { id: 'jet', name: 'Private Jet', price: 1500000, defense: 35, minLevel: 70, tier: 5, color: '#e2e8f0' },
-];
-
-export const PROPERTIES = [
-  { id: 'corner_store', name: 'Corner Store', price: 5000, income: 50, minLevel: 3, tier: 1, color: '#84cc16' },
-  { id: 'laundromat', name: 'Laundromat Front', price: 15000, income: 120, minLevel: 6, tier: 1, color: '#22d3ee' },
-  { id: 'pool_hall', name: 'Pool Hall', price: 35000, income: 250, minLevel: 10, tier: 2, color: '#a3e635' },
-  { id: 'nightclub', name: 'Underground Club', price: 80000, income: 500, minLevel: 15, tier: 2, color: '#c026d3' },
-  { id: 'warehouse', name: 'Storage Warehouse', price: 180000, income: 900, minLevel: 22, tier: 3, color: '#78716c' },
-  { id: 'casino_floor', name: 'Casino Floor', price: 400000, income: 1800, minLevel: 30, tier: 3, color: '#eab308' },
-  { id: 'hotel_tower', name: 'Hotel Tower', price: 850000, income: 3500, minLevel: 40, tier: 4, color: '#6366f1' },
-  { id: 'shipping_port', name: 'Shipping Port', price: 1800000, income: 7000, minLevel: 52, tier: 4, color: '#0ea5e9' },
-  { id: 'skyscraper', name: 'Skyline Tower', price: 4000000, income: 14000, minLevel: 65, tier: 5, color: '#f97316' },
-  { id: 'empire_hq', name: 'Empire Headquarters', price: 10000000, income: 35000, minLevel: 80, tier: 5, color: '#ef4444' },
-];
+export const BASE_STATS = { maxEnergy: 10, maxStamina: 5, maxHealth: 100, attack: 1, defense: 1 };
+export const STAT_GROWTH_PER_LEVEL = { maxEnergy: 2, maxStamina: 1, maxHealth: 10 };
 
 export const HOSPITAL_COST_PER_HP = 10;
 export const BANK_FEE_PERCENT = 0;
 export const HITLIST_MIN_BOUNTY = 1000;
 export const HITLIST_FEE_PERCENT = 0.1;
-export const FIGHT_STAMINA_COST = 1;
-export const FIGHT_XP_WIN = 15;
-export const FIGHT_XP_LOSE = 5;
-export const FIGHT_MONEY_WIN = [100, 500];
-export const FIGHT_RESPECT_WIN = 2;
 export const HITLIST_BONUS_MULTIPLIER = 1.5;
 export const CREW_MAX_MEMBERS = 50;
 export const CREW_BONUS_PER_MEMBER = 0.02;
 export const CREW_MAX_BONUS = 0.5;
+export const MOB_BONUS_PER_MEMBER = 0.015;
+export const MOB_MAX_BONUS = 0.45;
+export const MOB_RECRUIT_COST = (size) => Math.floor(500 * Math.pow(1.35, size));
+export const MOB_MAX_SIZE = 500;
+export const ICE_COST_PER_HOUR = 5000;
+export const ICE_MAX_HOURS = 24;
+export const BAIL_COST_PER_MINUTE = 50;
+export const SELL_BACK_RATIO = 0.5;
+export const SCRATCH_CARD_COST = 1000;
+export const GOLD_JOB_CHANCE = 0.02;
+export const DAILY_GIFTS_MAX = 10;
+export const REFERRAL_BONUS = 5000;
+
+export const FIGHT_TYPES = {
+  slap: { stamina: 1, xpWin: 8, xpLose: 3, money: [25, 100], respect: 1, damage: [5, 15], label: 'Slap' },
+  fight: { stamina: 1, xpWin: 15, xpLose: 5, money: [100, 500], respect: 2, damage: [10, 30], label: 'Fight' },
+  execute: { stamina: 2, xpWin: 30, xpLose: 8, money: [300, 1200], respect: 5, damage: [25, 50], killChance: 0.15, label: 'Execute' },
+};
+
+export const LOCATIONS = [
+  { id: 'downtown', name: 'Downtown', minLevel: 1, color: '#6366f1', city: 'Metro City' },
+  { id: 'industrial', name: 'Industrial District', minLevel: 5, color: '#78716c', city: 'Metro City' },
+  { id: 'waterfront', name: 'Waterfront', minLevel: 10, color: '#0ea5e9', city: 'Metro City' },
+  { id: 'uptown', name: 'Uptown', minLevel: 20, color: '#a855f7', city: 'Metro City' },
+  { id: 'casino_row', name: 'Casino Row', minLevel: 35, color: '#eab308', city: 'Metro City' },
+  { id: 'skyline', name: 'Skyline Heights', minLevel: 50, color: '#f97316', city: 'Metro City' },
+  { id: 'harbor', name: 'Harbor District', minLevel: 15, color: '#0891b2', city: 'Port Haven' },
+  { id: 'old_town', name: 'Old Town', minLevel: 25, color: '#a16207', city: 'Port Haven' },
+  { id: 'financial', name: 'Financial Quarter', minLevel: 40, color: '#059669', city: 'Port Haven' },
+  { id: 'red_light', name: 'Red Light Zone', minLevel: 55, color: '#be123c', city: 'Sin City' },
+  { id: 'desert_outpost', name: 'Desert Outpost', minLevel: 65, color: '#d97706', city: 'Sin City' },
+  { id: 'volcano', name: 'Volcano Ridge', minLevel: 80, color: '#dc2626', city: 'Sin City' },
+];
+
+const JOB_TEMPLATES = [
+  ['pickpocket', 'Pickpocket Tourists', 1, [25, 75], 5, 0.05, 2],
+  ['mug_runners', 'Mug Alley Runners', 2, [50, 120], 10, 0.08, 3],
+  ['fence_goods', 'Fence Stolen Goods', 3, [80, 180], 15, 0.1, 5],
+  ['extortion', 'Corner Extortion', 3, [100, 200], 18, 0.09, 4],
+  ['warehouse', 'Warehouse Heist', 4, [150, 350], 25, 0.12, 8],
+  ['truck_jack', 'Truck Jacking', 4, [180, 400], 28, 0.13, 9],
+  ['dock_smuggle', 'Dock Smuggling', 5, [300, 600], 40, 0.15, 10],
+  ['counterfeit', 'Counterfeit Ring', 5, [350, 700], 45, 0.14, 11],
+  ['nightclub', 'Nightclub Shakedown', 6, [500, 900], 55, 0.18, 12],
+  ['insider_trade', 'Insider Trading', 6, [550, 950], 58, 0.16, 10],
+  ['casino_scam', 'Casino Scam Ring', 7, [800, 1400], 75, 0.2, 15],
+  ['art_heist', 'Art Gallery Heist', 7, [900, 1600], 80, 0.19, 14],
+  ['penthouse', 'Penthouse Score', 8, [1200, 2200], 100, 0.22, 20],
+  ['bank_job', 'Bank Job', 8, [1500, 2800], 110, 0.24, 22],
+  ['arms_deal', 'Arms Deal', 9, [2000, 3500], 130, 0.25, 25],
+  ['hostile_takeover', 'Hostile Takeover', 9, [2500, 4200], 140, 0.26, 28],
+  ['diamond_run', 'Diamond Run', 10, [3500, 6000], 170, 0.28, 30],
+  ['syndicate_hit', 'Syndicate Hit', 10, [4000, 7000], 190, 0.3, 35],
+];
+
+export const JOBS = LOCATIONS.flatMap((loc, li) =>
+  JOB_TEMPLATES.slice(0, 3 + Math.min(li, 6)).map(([slug, name, energy, money, xp, failRate, jailMinutes], ji) => ({
+    id: `${loc.id}_${slug}`,
+    location: loc.id,
+    name: `${name} (${loc.name})`,
+    energy,
+    money,
+    xp: xp + li * 2,
+    failRate: Math.min(0.35, failRate + li * 0.01),
+    jailMinutes,
+  })),
+);
+
+function tieredItems(category, names, statKey, baseStat, basePrice, colors) {
+  return names.map((name, i) => ({
+    id: `${category}_${name.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`,
+    name,
+    price: Math.floor(basePrice * Math.pow(1.75, i)),
+    [statKey]: Math.floor(baseStat * (1 + i * 0.55)),
+    minLevel: 1 + i * 4,
+    tier: Math.min(5, 1 + Math.floor(i / 4)),
+    color: colors[i % colors.length],
+  }));
+}
+
+export const WEAPONS = tieredItems('w', [
+  'Rusty Knife', 'Baseball Bat', 'Switchblade', 'Brass Knuckles', 'Street Revolver',
+  'Sawed-Off Shotgun', 'Compact SMG', 'Tactical Rifle', 'Assault Rifle', 'Combat Shotgun',
+  'Long-Range Sniper', 'Dual Pistols', 'Golden Pistol', 'Plasma Cutter', 'Boss Cannon',
+  'War Hammer', 'Shadow Blade', 'Empire Destroyer', 'Annihilator', 'Godfather Special',
+], 'attack', 2, 500, ['#94a3b8', '#b45309', '#64748b', '#78716c', '#475569', '#78350f', '#1e293b', '#14532d', '#166534', '#312e81', '#581c87', '#ca8a04', '#eab308', '#7f1d1d', '#450a0a', '#44403c', '#0f172a', '#991b1b', '#701a75', '#fbbf24']);
+
+export const ARMOR = tieredItems('a', [
+  'Leather Jacket', 'Kevlar Vest', 'Street Helmet', 'Tactical Vest', 'Riot Gear',
+  'Ballistic Suit', 'Elite Body Armor', 'Warlord Plate', 'Phantom Suit', 'Empire Guard',
+  'Dragon Scale', 'Titan Plate', 'Shadow Cloak', 'Invincible Mesh', 'Emperor Mantle',
+  'Fortress Shell', 'Aegis Suit', 'Void Armor', 'Immortal Guard', 'Legend Plate',
+], 'defense', 2, 800, ['#44403c', '#57534e', '#334155', '#166534', '#1e3a8a', '#374151', '#581c87', '#713f12', '#0f172a', '#991b1b', '#7c2d12', '#1e40af', '#312e81', '#134e4a', '#854d0e', '#44403c', '#0369a1', '#4c1d95', '#881337', '#fbbf24']);
+
+export const VEHICLES = tieredItems('v', [
+  'Beaten Sedan', 'Muscle Car', 'Armored SUV', 'Speedboat', 'Executive Limo',
+  'Private Helicopter', 'Luxury Yacht', 'Private Jet', 'Tank Limo', 'Stealth Bike',
+  'War Rig', 'Submarine', 'Orbital Shuttle', 'Mobile Fortress', 'Ghost Train',
+], 'defense', 1, 2000, ['#71717a', '#dc2626', '#1f2937', '#0284c7', '#18181b', '#0369a1', '#f5f5f4', '#e2e8f0', '#422006', '#09090b', '#7f1d1d', '#164e63', '#6366f1', '#374151', '#78350f']);
+
+export const PROPERTIES = tieredItems('p', [
+  'Corner Store', 'Laundromat Front', 'Pool Hall', 'Underground Club', 'Storage Warehouse',
+  'Casino Floor', 'Hotel Tower', 'Shipping Port', 'Skyline Tower', 'Empire HQ',
+  'Oil Refinery', 'Media Conglomerate', 'Private Island', 'Satellite Network', 'World Bank Share',
+], 'income', 50, 5000, ['#84cc16', '#22d3ee', '#a3e635', '#c026d3', '#78716c', '#eab308', '#6366f1', '#0ea5e9', '#f97316', '#ef4444', '#854d0e', '#a855f7', '#06b6d4', '#8b5cf6', '#fbbf24']).map((p, i) => ({ ...p, income: p.income }));
+
+export const CONSUMABLES = [
+  { id: 'energy_pack', name: 'Energy Pack', price: 2500, goldPrice: 5, effect: 'energy', amount: 10, minLevel: 1, tier: 1, color: '#3b82f6' },
+  { id: 'stamina_drink', name: 'Stamina Drink', price: 2000, goldPrice: 4, effect: 'stamina', amount: 5, minLevel: 1, tier: 1, color: '#22c55e' },
+  { id: 'health_kit', name: 'Health Kit', price: 1500, goldPrice: 3, effect: 'health', amount: 50, minLevel: 1, tier: 1, color: '#ef4444' },
+  { id: 'mob_contract', name: 'Mob Contract', price: 10000, goldPrice: 15, effect: 'mob', amount: 5, minLevel: 10, tier: 2, color: '#a855f7' },
+  { id: 'ice_pack', name: 'Ice Pack (4hr)', price: 15000, goldPrice: 10, effect: 'ice', amount: 4, minLevel: 5, tier: 2, color: '#06b6d4' },
+  { id: 'xp_boost', name: 'XP Boost', price: 8000, goldPrice: 8, effect: 'xp_boost', amount: 2, minLevel: 8, tier: 2, color: '#fbbf24' },
+];
+
+export const BOSSES = [
+  { id: 'street_boss', name: 'Street Boss Vinnie', minLevel: 5, hp: 500, attack: 15, defense: 10, money: [2000, 5000], xp: 100, respect: 10, stamina: 2, tier: 1, color: '#78716c' },
+  { id: 'district_chief', name: 'District Chief Morales', minLevel: 15, hp: 1500, attack: 35, defense: 25, money: [8000, 15000], xp: 250, respect: 25, stamina: 3, tier: 2, color: '#6366f1' },
+  { id: 'crime_lord', name: 'Crime Lord Santoro', minLevel: 30, hp: 4000, attack: 70, defense: 50, money: [25000, 50000], xp: 500, respect: 50, stamina: 4, tier: 3, color: '#dc2626' },
+  { id: 'syndicate_head', name: 'Syndicate Head Kane', minLevel: 50, hp: 10000, attack: 120, defense: 90, money: [75000, 150000], xp: 1000, respect: 100, stamina: 5, tier: 4, color: '#7c3aed' },
+  { id: 'godfather', name: 'The Godfather', minLevel: 75, hp: 25000, attack: 200, defense: 150, money: [200000, 500000], xp: 2500, respect: 250, stamina: 6, tier: 5, color: '#fbbf24' },
+];
+
+export const ACHIEVEMENTS = [
+  { id: 'first_job', name: 'First Score', desc: 'Complete your first job', reward: 500, gold: 1, check: (p) => p.jobs_done >= 1 },
+  { id: 'first_fight', name: 'Blood In', desc: 'Win your first fight', reward: 1000, gold: 2, check: (p) => p.wins >= 1 },
+  { id: 'level_10', name: 'Rising Star', desc: 'Reach level 10', reward: 5000, gold: 5, check: (p) => p.level >= 10 },
+  { id: 'level_25', name: 'Made Man', desc: 'Reach level 25', reward: 15000, gold: 10, check: (p) => p.level >= 25 },
+  { id: 'level_50', name: 'Capo', desc: 'Reach level 50', reward: 50000, gold: 25, check: (p) => p.level >= 50 },
+  { id: 'level_100', name: 'Don', desc: 'Reach level 100', reward: 200000, gold: 100, check: (p) => p.level >= 100 },
+  { id: 'mob_50', name: 'Small Army', desc: 'Recruit 50 mob members', reward: 10000, gold: 5, check: (p) => p.mob_size >= 50 },
+  { id: 'mob_200', name: 'Mob Boss', desc: 'Recruit 200 mob members', reward: 50000, gold: 20, check: (p) => p.mob_size >= 200 },
+  { id: 'wins_100', name: 'Enforcer', desc: 'Win 100 fights', reward: 25000, gold: 15, check: (p) => p.wins >= 100 },
+  { id: 'kills_10', name: 'Executioner', desc: 'Get 10 kills', reward: 20000, gold: 10, check: (p) => p.kills >= 10 },
+  { id: 'property_5', name: 'Landlord', desc: 'Own 5 properties', reward: 30000, gold: 10, check: (p) => (p.propertyCount || 0) >= 5 },
+  { id: 'crew_leader', name: 'Family Head', desc: 'Lead a crew', reward: 15000, gold: 8, check: (p) => p.crew_role === 'leader' },
+  { id: 'respect_1000', name: 'Respected', desc: 'Earn 1000 respect', reward: 50000, gold: 20, check: (p) => p.respect >= 1000 },
+  { id: 'daily_7', name: 'Dedicated', desc: '7-day login streak', reward: 10000, gold: 7, check: (p) => p.daily_streak >= 7 },
+  { id: 'daily_30', name: 'Loyal Soldier', desc: '30-day login streak', reward: 100000, gold: 30, check: (p) => p.daily_streak >= 30 },
+  { id: 'boss_1', name: 'Boss Slayer', desc: 'Defeat your first boss', reward: 20000, gold: 15, check: (p) => (p.bossKills || 0) >= 1 },
+  { id: 'referral_5', name: 'Recruiter', desc: 'Refer 5 players', reward: 50000, gold: 25, check: (p) => (p.referralCount || 0) >= 5 },
+  { id: 'bank_100k', name: 'Money Bags', desc: 'Have $100k in bank', reward: 25000, gold: 10, check: (p) => p.bank_balance >= 100000 },
+  { id: 'hitlist_5', name: 'Contract Killer', desc: 'Claim 5 hitlist bounties', reward: 30000, gold: 15, check: (p) => (p.bountiesClaimed || 0) >= 5 },
+  { id: 'scratch_jackpot', name: 'Lucky Break', desc: 'Win scratch card jackpot', reward: 50000, gold: 20, check: (p) => p.scratchJackpot },
+];
+
+export const DAILY_LOGIN_REWARDS = [
+  { day: 1, money: 500, gold: 1, energy: 5 },
+  { day: 2, money: 750, gold: 1, energy: 5 },
+  { day: 3, money: 1000, gold: 2, stamina: 3 },
+  { day: 4, money: 1500, gold: 2, energy: 8 },
+  { day: 5, money: 2500, gold: 3, stamina: 5 },
+  { day: 6, money: 3500, gold: 3, energy: 10 },
+  { day: 7, money: 10000, gold: 10, energy: 15, stamina: 10 },
+];
+
+export const DAILY_MISSIONS = [
+  { id: 'jobs_5', name: 'Complete 5 Jobs', type: 'jobs', target: 5, reward: 3000, gold: 2, xp: 50 },
+  { id: 'fights_3', name: 'Win 3 Fights', type: 'wins', target: 3, reward: 5000, gold: 3, xp: 75 },
+  { id: 'spend_10k', name: 'Spend $10,000', type: 'spent', target: 10000, reward: 4000, gold: 2, xp: 40 },
+  { id: 'recruit_mob', name: 'Recruit 10 Mob', type: 'mob_recruited', target: 10, reward: 2500, gold: 2, xp: 30 },
+  { id: 'boss_1', name: 'Fight a Boss', type: 'boss_fights', target: 1, reward: 8000, gold: 5, xp: 100 },
+];
+
+export const SCRATCH_PRIZES = [
+  { weight: 40, money: [100, 500], label: 'Small Cash' },
+  { weight: 25, money: [500, 2000], label: 'Medium Cash' },
+  { weight: 15, money: [2000, 5000], label: 'Big Cash' },
+  { weight: 10, energy: 5, label: 'Energy Boost' },
+  { weight: 5, gold: 3, label: 'Gold Bars' },
+  { weight: 4, money: [10000, 25000], label: 'Jackpot', jackpot: true },
+  { weight: 1, gold: 25, label: 'MEGA Jackpot', jackpot: true },
+];
+
+export const TERRITORIES = [
+  { id: 'downtown_block', name: 'Downtown Block', bonus: 0.05, minCrewLevel: 5, color: '#6366f1' },
+  { id: 'industrial_yard', name: 'Industrial Yard', bonus: 0.08, minCrewLevel: 10, color: '#78716c' },
+  { id: 'waterfront_docks', name: 'Waterfront Docks', bonus: 0.1, minCrewLevel: 15, color: '#0ea5e9' },
+  { id: 'casino_strip', name: 'Casino Strip', bonus: 0.15, minCrewLevel: 25, color: '#eab308' },
+  { id: 'skyline_crown', name: 'Skyline Crown', bonus: 0.2, minCrewLevel: 40, color: '#f97316' },
+  { id: 'empire_throne', name: 'Empire Throne', bonus: 0.3, minCrewLevel: 60, color: '#ef4444' },
+];
+
+export const COLLECTIONS = [
+  { id: 'street_set', name: 'Street Set', items: ['w_rusty_knife', 'a_leather_jacket', 'v_beaten_sedan'], bonus: { attack: 5 } },
+  { id: 'warlord_set', name: 'Warlord Set', items: ['w_assault_rifle', 'a_warlord_plate', 'v_armored_suv'], bonus: { attack: 15, defense: 10 } },
+  { id: 'empire_set', name: 'Empire Set', items: ['w_godfather_special', 'a_legend_plate', 'v_mobile_fortress'], bonus: { attack: 50, defense: 40 } },
+];
 
 export const BOT_NAMES = [
   'ShadowViper', 'IronFist', 'NightCrawler', 'CrimsonKing', 'GhostRunner',
   'SteelWolf', 'BlackLotus', 'ViperStrike', 'DarkMercury', 'RogueHammer',
   'SilentBlade', 'CopperFang', 'NeonReaper', 'StormBreaker', 'ObsidianJack',
   'RapidCobra', 'GrimLedger', 'ChromeBoss', 'ZeroMerc', 'VaultHunter',
+  'BloodRaven', 'SilverTongue', 'DeathDealer', 'PhantomKing', 'RustyChain',
+  'ColdTrigger', 'NightBoss', 'ScarletAce', 'ToxicBlade', 'GraveDigger',
 ];
 
 export const ALL_ITEMS = [
@@ -123,12 +219,20 @@ export const ALL_ITEMS = [
   ...ARMOR.map((i) => ({ ...i, category: 'armor' })),
   ...VEHICLES.map((i) => ({ ...i, category: 'vehicle' })),
   ...PROPERTIES.map((i) => ({ ...i, category: 'property' })),
+  ...CONSUMABLES.map((i) => ({ ...i, category: 'consumable' })),
 ];
 
 export function getItemById(id) {
-  return ALL_ITEMS.find((i) => i.id === id) || JOBS.find((j) => j.id === id) || LOCATIONS.find((l) => l.id === id);
+  return ALL_ITEMS.find((i) => i.id === id) || JOBS.find((j) => j.id === id) || LOCATIONS.find((l) => l.id === id) || BOSSES.find((b) => b.id === id);
 }
 
 export function itemThumbnailPath(category, id) {
   return `/assets/items/${category}_${id}.svg`;
+}
+
+export function generateReferralCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
 }
