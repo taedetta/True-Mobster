@@ -28,10 +28,10 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       imgSrc: ["'self'", 'data:', 'blob:'],
       connectSrc: ["'self'", 'wss:', 'ws:'],
-      fontSrc: ["'self'", 'https:', 'data:'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
     },
   },
 }));

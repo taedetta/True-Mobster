@@ -43,11 +43,14 @@ async function main() {
     pass(`Catalog (${cat.weapons?.length} weapons)`);
   } catch (e) { fail('Catalog', e.message); }
 
-  // Job
+  // Job (run multiple times to earn cash for later tests)
   try {
-    const job = await req('/game/job', { method: 'POST', token, body: { jobId: 'downtown_pickpocket' } });
-    if (job.state) { state = job.state; pass(`Job (${job.success ? 'success' : 'fail'}) money=${job.money}`); }
-    else fail('Job', 'no state returned');
+    let lastJob;
+    for (let i = 0; i < 8; i++) {
+      lastJob = await req('/game/job', { method: 'POST', token, body: { jobId: 'downtown_pickpocket' } });
+      if (lastJob.state) state = lastJob.state;
+    }
+    pass(`Job x8 (last: ${lastJob.success ? 'success' : 'fail'}, money=$${state.money})`);
   } catch (e) { fail('Job', e.message); }
 
   // Buy weapon
