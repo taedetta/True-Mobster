@@ -18,7 +18,6 @@ import {
 } from '../../../shared/gameData.js';
 
 const router = Router();
-router.use(authMiddleware);
 
 const wrap = (fn) => async (req, res) => {
   try {
@@ -28,8 +27,6 @@ const wrap = (fn) => async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 };
-
-router.get('/state', wrap(async (req) => buildPlayerState(req.userId)));
 
 router.get('/catalog', wrap(async () => {
   const enrich = (items, category) =>
@@ -46,6 +43,10 @@ router.get('/catalog', wrap(async () => {
     dailyMissions: DAILY_MISSIONS, dailyLoginRewards: DAILY_LOGIN_REWARDS,
   };
 }));
+
+router.use(authMiddleware);
+
+router.get('/state', wrap(async (req) => buildPlayerState(req.userId)));
 
 router.post('/job', wrap(async (req) => {
   const result = await doJob(req.userId, req.body.jobId);

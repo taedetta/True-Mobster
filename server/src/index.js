@@ -18,16 +18,32 @@ import { GAME_NAME, STUDIO } from '../../shared/gameData.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3002;
-const CLIENT_URL = process.env.CLIENT_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:5173';
 
 const app = express();
 const httpServer = createServer(app);
 
-const allowedOrigins = [CLIENT_URL, 'http://localhost:5173', process.env.RENDER_EXTERNAL_URL].filter(Boolean);
-const io = new Server(httpServer, { cors: { origin: allowedOrigins, credentials: true } });
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'blob:'],
+      connectSrc: ["'self'", 'wss:', 'ws:'],
+      fontSrc: ["'self'", 'https:', 'data:'],
+    },
+  },
+}));
 
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({ origin: allowedOrigins, credentials: true }));
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || origin.includes('onrender.com') || origin.includes('localhost')) cb(null, true);
+    else cb(null, true);
+  },
+  credentials: true,
+}));
+
 app.use(express.json({ limit: '32kb' }));
 app.use(rateLimit({ windowMs: 60000, max: 150, standardHeaders: true, legacyHeaders: false }));
 
@@ -39,7 +55,7 @@ app.use('/api/game/buy', actionLimiter);
 app.use('/assets/items', express.static(path.join(__dirname, '../../client/public/assets/items')));
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', game: GAME_NAME, studio: STUDIO, version: '2.0.0' });
+  res.json({ status: 'ok', game: GAME_NAME, studio: STUDIO, version: '2.0.1' });
 });
 
 app.use('/api/auth', authRoutes);
@@ -47,9 +63,18 @@ app.use('/api/game', gameRoutes);
 
 if (process.env.NODE_ENV === 'production') {
   const clientDist = path.join(__dirname, '../../client/dist');
-  app.use(express.static(clientDist));
-  app.get('*', (_req, res) => res.sendFile(path.join(clientDist, 'index.html')));
+  app.use(express.static(clientDist, { index: false }));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/assets') || req.path.includes('.')) {
+      return next();
+    }
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
 }
+
+const io = new Server(httpServer, {
+  cors: { origin: true, credentials: true },
+});
 
 io.use((socket, next) => {
   const token = socket.handshake.auth?.token;
@@ -76,13 +101,13 @@ export function emitPlayerUpdate(userId) {
 
 async function start() {
   await initDatabase();
-  await seedBots();
-  setInterval(() => processBotRetaliations().catch(console.error), 15000);
-  setInterval(() => io.emit('tick', { time: Date.now() }), 30000);
   httpServer.listen(PORT, () => {
     console.log(`${GAME_NAME} v2 by ${STUDIO} — port ${PORT}`);
     console.log(process.env.DATABASE_URL ? 'PostgreSQL connected' : 'SQLite (local dev)');
   });
+  seedBots().catch((err) => console.error('Bot seed error:', err));
+  setInterval(() => processBotRetaliations().catch(console.error), 15000);
+  setInterval(() => io.emit('tick', { time: Date.now() }), 30000);
 }
 
 start().catch((err) => { console.error('Failed to start:', err); process.exit(1); });

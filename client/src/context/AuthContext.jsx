@@ -1,14 +1,47 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { api } from '../api';
+import { api, setAuthFailureHandler } from '../api';
 
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
+function readStoredUser() {
+  try {
     const saved = localStorage.getItem('tm_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+    const token = localStorage.getItem('tm_token');
+    if (!saved || !token) return null;
+    return JSON.parse(saved);
+  } catch {
+    return null;
+  }
+}
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const logout = useCallback(() => {
+    localStorage.removeItem('tm_token');
+    localStorage.removeItem('tm_user');
+    setUser(null);
+  }, []);
+
+  useEffect(() => {
+    setAuthFailureHandler(logout);
+    return () => setAuthFailureHandler(null);
+  }, [logout]);
+
+  useEffect(() => {
+    const stored = readStoredUser();
+    if (!stored) {
+      setAuthReady(true);
+      return;
+    }
+
+    api('/auth/me')
+      .then(() => setUser(stored))
+      .catch(() => logout())
+      .finally(() => setAuthReady(true));
+  }, [logout]);
 
   const login = async (username, password) => {
     setLoading(true);
@@ -42,14 +75,8 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('tm_token');
-    localStorage.removeItem('tm_user');
-    setUser(null);
-  }, []);
-
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loading, authReady }}>
       {children}
     </AuthContext.Provider>
   );

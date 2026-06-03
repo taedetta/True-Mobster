@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { api } from '../api';
 import { useAuth } from './AuthContext';
@@ -6,12 +6,12 @@ import { useAuth } from './AuthContext';
 const GameContext = createContext(null);
 
 export function GameProvider({ children }) {
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
   const [state, setState] = useState(null);
   const [catalog, setCatalog] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
-  const [socket, setSocket] = useState(null);
+  const socketRef = useRef(null);
 
   const showMessage = useCallback((text, type = 'info') => {
     setMessage({ text, type });
@@ -19,48 +19,69 @@ export function GameProvider({ children }) {
   }, []);
 
   const refresh = useCallback(async () => {
-    if (!user) return;
+    if (!user) return null;
     try {
       const data = await api('/game/state');
       setState(data);
+      return data;
     } catch (err) {
       showMessage(err.message, 'error');
+      return null;
     }
   }, [user, showMessage]);
 
   const loadCatalog = useCallback(async () => {
-    const data = await api('/game/catalog');
-    setCatalog(data);
-  }, []);
+    try {
+      const data = await api('/game/catalog');
+      setCatalog(data);
+      return data;
+    } catch (err) {
+      showMessage(err.message, 'error');
+      return null;
+    }
+  }, [showMessage]);
 
   useEffect(() => {
+    if (!authReady) return;
+
     if (!user) {
       setState(null);
+      setCatalog(null);
       setLoading(false);
+      socketRef.current?.disconnect();
+      socketRef.current = null;
       return;
     }
 
+    let cancelled = false;
     setLoading(true);
+
     Promise.all([refresh(), loadCatalog()])
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
     const token = localStorage.getItem('tm_token');
-    const socketUrl = import.meta.env.DEV ? 'http://localhost:3002' : window.location.origin;
-    const s = io(socketUrl, {
+    const s = io(window.location.origin, {
       auth: { token },
       transports: ['websocket', 'polling'],
+      reconnectionAttempts: 5,
+      timeout: 20000,
     });
 
     s.on('state', setState);
     s.on('connect', () => s.emit('refresh'));
-    setSocket(s);
+    s.on('connect_error', () => { /* non-fatal */ });
+    socketRef.current = s;
 
     const interval = setInterval(refresh, 60000);
     return () => {
+      cancelled = true;
       s.disconnect();
       clearInterval(interval);
+      socketRef.current = null;
     };
-  }, [user, refresh, loadCatalog]);
+  }, [user, authReady, refresh, loadCatalog]);
 
   const action = useCallback(async (path, body, successMsg) => {
     try {
@@ -70,13 +91,13 @@ export function GameProvider({ children }) {
       });
       if (data.state) setState(data.state);
       if (successMsg) showMessage(successMsg, 'success');
-      socket?.emit('refresh');
+      socketRef.current?.emit('refresh');
       return data;
     } catch (err) {
       showMessage(err.message, 'error');
       throw err;
     }
-  }, [showMessage, socket]);
+  }, [showMessage]);
 
   const gameGet = useCallback(async (path) => {
     try {
