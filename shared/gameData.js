@@ -227,9 +227,7 @@ export function getItemById(id) {
 }
 
 export function itemThumbnailPath(category, id) {
-  const png = `/assets/items/${category}_${id}.png`;
-  const svg = `/assets/items/${category}_${id}.svg`;
-  return png; // prefer PNG when present; UI falls back to SVG on error
+  return `/assets/items/${category}_${id}.webp`;
 }
 
 export function generateReferralCode() {

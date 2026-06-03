@@ -8,7 +8,8 @@
     "start": "NODE_ENV=production node src/index.js",
     "dev": "node --watch src/index.js",
     "seed": "node src/db/seed.js",
-    "generate-thumbnails": "node scripts/generate-thumbnails.js"
+    "generate-thumbnails": "node scripts/generate-thumbnails.js",
+    "optimize-thumbnails": "node scripts/optimize-thumbnails.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -22,5 +23,8 @@
     "pg": "^8.13.1",
     "socket.io": "^4.8.1",
     "uuid": "^11.0.3"
+  },
+  "devDependencies": {
+    "sharp": "^0.33.5"
   }
 }

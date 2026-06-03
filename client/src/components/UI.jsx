@@ -1,4 +1,5 @@
 import { formatMoney } from '../api';
+import ItemImage from './ItemImage';
 
 
 
@@ -148,19 +149,8 @@ export function ItemCard({ item, owned, equipped, onBuy, onEquip, playerLevel, p
 
     <div className={`group card flex flex-col items-center text-center transition-all duration-200 hover:border-mob-gold/30 hover:shadow-glow ${equipped ? 'ring-2 ring-mob-gold shadow-glow' : ''}`}>
 
-      <div className="relative mb-3">
-
-        <img
-        src={item.thumbnail}
-        alt={item.name}
-        className="item-img"
-        loading="lazy"
-        onError={(e) => {
-          if (e.currentTarget.src.endsWith('.png')) {
-            e.currentTarget.src = item.thumbnail.replace('.png', '.svg');
-          }
-        }}
-      />
+      <div className="relative mb-3 flex items-center justify-center">
+        <ItemImage src={item.thumbnail} alt={item.name} size="card" />
 
         {equipped && <span className="absolute -top-1 -right-1 bg-mob-gold text-black text-[10px] font-bold px-2 py-0.5 rounded-full">ON</span>}
 

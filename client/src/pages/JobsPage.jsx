@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { formatMoney } from '../api';
+import ItemImage from '../components/ItemImage';
 
 export default function JobsPage() {
   const { catalog, state, action, showMessage } = useGame();
@@ -45,13 +46,7 @@ export default function JobsPage() {
       <div className="space-y-3">
         {jobs.map((job) => (
           <div key={job.id} className="card flex gap-3 items-center">
-            <img
-              src={job.thumbnail}
-              alt={job.name}
-              className="item-img w-24 h-24 flex-shrink-0"
-              loading="lazy"
-              onError={(e) => { if (e.currentTarget.src.endsWith('.png')) e.currentTarget.src = job.thumbnail.replace('.png', '.svg'); }}
-            />
+            <ItemImage src={job.thumbnail} alt={job.name} size="list" />
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-sm">{job.name}</h3>
               <p className="text-xs text-gray-400 mt-1">

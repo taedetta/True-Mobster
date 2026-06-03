@@ -143,8 +143,16 @@
   }
 
   .item-img {
-    @apply w-32 h-32 rounded-2xl object-cover bg-mob-bg/50 border border-mob-border/40
-      shadow-item transition-transform duration-200 group-hover:scale-105;
+    @apply w-24 h-24 rounded-xl object-contain bg-mob-bg/60 border border-mob-border/40 p-1
+      shadow-item transition-transform duration-200 group-hover:scale-105 flex-shrink-0;
+  }
+  .item-img-sm {
+    @apply w-20 h-20 rounded-lg object-contain bg-mob-bg/60 border border-mob-border/40 p-0.5
+      shadow-item flex-shrink-0;
+  }
+  .item-img-lg {
+    @apply w-40 h-40 rounded-2xl object-contain bg-mob-bg/60 border border-mob-border/40 p-1
+      shadow-item;
   }
 
   .glass-header {

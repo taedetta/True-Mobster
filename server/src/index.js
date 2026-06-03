@@ -52,10 +52,14 @@ app.use('/api/game/job', actionLimiter);
 app.use('/api/game/fight', actionLimiter);
 app.use('/api/game/buy', actionLimiter);
 
-app.use('/assets/items', express.static(path.join(__dirname, '../../client/public/assets/items')));
+app.use('/assets/items', express.static(path.join(__dirname, '../../client/public/assets/items'), {
+  maxAge: process.env.NODE_ENV === 'production' ? '30d' : 0,
+  etag: true,
+  immutable: process.env.NODE_ENV === 'production',
+}));
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', game: GAME_NAME, studio: STUDIO, version: '2.0.3' });
+  res.json({ status: 'ok', game: GAME_NAME, studio: STUDIO, version: '2.0.4' });
 });
 
 app.use('/api/auth', authRoutes);

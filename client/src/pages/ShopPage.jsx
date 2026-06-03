@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useGame } from '../context/GameContext';
 
 import { ItemCard } from '../components/UI';
+import ItemImage from '../components/ItemImage';
 
 import { formatMoney } from '../api';
 
@@ -220,15 +221,10 @@ export default function ShopPage() {
 
             <div key={item.id} className="card flex gap-3 items-center">
 
-              <img
-                src={item.thumbnail || `/assets/items/consumable_${item.id}.png`}
+              <ItemImage
+                src={item.thumbnail || `/assets/items/consumable_${item.id}.webp`}
                 alt={item.name}
-                className="item-img w-24 h-24 flex-shrink-0"
-                loading="lazy"
-                onError={(e) => {
-                  const src = e.currentTarget.src;
-                  if (src.endsWith('.png')) e.currentTarget.src = src.replace('.png', '.svg');
-                }}
+                size="list"
               />
 
               <div className="flex-1 min-w-0">
