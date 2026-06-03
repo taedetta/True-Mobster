@@ -11,7 +11,7 @@ import {
   addFriend, removeFriend, getFriends, sendGift, getGifts, claimGifts,
   getMail, readMail, readAllMail, getNews, getRevengeList, getPlayerProfile,
   getTerritories, declareTerritoryWar, donateToCrew, kickCrewMember, transferLeadership,
-  updateAvatar, updateCustomAvatar, buyGoldStoreItem, getCollectionProgress,
+  updateAvatar, updateCustomAvatar, buyGodfatherItem, buyGoldStoreItem, getCollectionProgress,
 } from '../services/gameEngine.js';
 import {
   sendChatMessage, getChatMessages, sendPrivateMessage, getPrivateMessages,
@@ -21,7 +21,7 @@ import {
   JOBS, LOCATIONS, WEAPONS, ARMOR, VEHICLES, PROPERTIES, CONSUMABLES, BOSSES,
   ACHIEVEMENTS, DAILY_MISSIONS, DAILY_LOGIN_REWARDS, TERRITORIES, FIGHT_TYPES,
   itemThumbnailPath, GAME_NAME, STUDIO, MOB_RECRUIT_COST, MOB_MAX_SIZE, DEFAULT_AVATARS,
-  COLLECTIONS, GOLD_STORE, MOB_USABLE_PER_LEVEL, getMobBracket,
+  COLLECTIONS, GODFATHER_STORE, GOLD_STORE, MOB_USABLE_PER_LEVEL, getMobBracket,
 } from '../../../shared/gameData.js';
 
 const router = Router();
@@ -50,7 +50,8 @@ router.get('/catalog', wrap(async () => {
     dailyMissions: DAILY_MISSIONS, dailyLoginRewards: DAILY_LOGIN_REWARDS,
     defaultAvatars: DEFAULT_AVATARS,
     collections: COLLECTIONS,
-    goldStore: GOLD_STORE,
+    goldStore: GODFATHER_STORE,
+    godfatherStore: GODFATHER_STORE,
     mobUsablePerLevel: MOB_USABLE_PER_LEVEL,
   };
 }));
@@ -73,8 +74,8 @@ router.get('/fight-list', wrap(async (req) => getFightList(req.userId)));
 router.get('/revenge', wrap(async (req) => getRevengeList(req.userId)));
 
 router.post('/buy', wrap(async (req) => {
-  const item = await buyItem(req.userId, req.body.itemId, req.body.category, req.body.useGold);
-  return { item, state: await buildPlayerState(req.userId) };
+  const result = await buyItem(req.userId, req.body.itemId, req.body.category, req.body.quantity || 1);
+  return { ...result, state: await buildPlayerState(req.userId) };
 }));
 
 router.post('/shop/sell', wrap(async (req) => {
@@ -200,8 +201,13 @@ router.get('/collections', wrap(async (req) => {
   return { collections: getCollectionProgress(inventory) };
 }));
 
+router.post('/godfather/buy', wrap(async (req) => {
+  const result = await buyGodfatherItem(req.userId, req.body.packId, req.body.quantity || 1);
+  return { ...result, state: await buildPlayerState(req.userId) };
+}));
+
 router.post('/gold/buy', wrap(async (req) => {
-  const result = await buyGoldStoreItem(req.userId, req.body.packId);
+  const result = await buyGodfatherItem(req.userId, req.body.packId, req.body.quantity || 1);
   return { ...result, state: await buildPlayerState(req.userId) };
 }));
 

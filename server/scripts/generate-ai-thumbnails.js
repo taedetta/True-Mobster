@@ -1,8 +1,9 @@
-/** Generate AI PNG thumbnails for priority items (weapons, consumables, armor, vehicles) */
+/** Generate AI PNG thumbnails — uses standard aiImagePrompt template (v2.3+) */
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { WEAPONS, ARMOR, VEHICLES, CONSUMABLES, PROPERTIES, BOSSES } from '../../shared/gameData.js';
+import { WEAPONS, ARMOR, VEHICLES, CONSUMABLES, PROPERTIES, BOSSES, JOBS } from '../../shared/gameData.js';
+import { aiImagePrompt, AI_IMAGE_CONTEXT } from './aiImagePrompt.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.join(__dirname, '../../client/public/assets/items');
@@ -17,21 +18,14 @@ function hashSeed(str) {
 }
 
 function prompt(category, item) {
-  const name = item.name.replace(/\([^)]*\)/g, '').trim();
-  const ctx = {
-    weapon: 'detailed mafia weapon prop',
-    armor: 'tactical armor equipment',
-    vehicle: 'crime syndicate vehicle',
-    property: 'criminal business property',
-    consumable: 'game power-up item',
-    boss: 'crime boss character portrait',
-  }[category] || 'game item';
-  return encodeURIComponent(`${name}, ${ctx}, premium mobile game icon, isolated centered object, dark studio background, cinematic rim light, ultra detailed 3D product render, no text, no logo, no watermark`);
+  const ctx = AI_IMAGE_CONTEXT[category] || 'game item';
+  return encodeURIComponent(aiImagePrompt(item.name, ctx));
 }
 
-async function generate(category, item) {
-  const file = `${category}_${item.id}.png`;
-  const url = `https://image.pollinations.ai/prompt/${prompt(category, item)}?width=512&height=512&nologo=true&seed=${hashSeed(item.id)}`;
+async function generate(category, item, idOverride) {
+  const id = idOverride || item.id;
+  const file = `${category}_${id}.png`;
+  const url = `https://image.pollinations.ai/prompt/${prompt(category, item)}?width=512&height=512&nologo=true&seed=${hashSeed(id)}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(120000) });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
@@ -40,6 +34,11 @@ async function generate(category, item) {
   console.log(`✓ ${file} (${Math.round(buf.length / 1024)}KB)`);
 }
 
+const jobItems = [...new Map(JOBS.map((j) => {
+  const id = j.artSlug || j.id;
+  return [id, { id, name: j.name }];
+})).values()];
+
 const batches = [
   ['weapon', WEAPONS],
   ['consumable', CONSUMABLES],
@@ -47,9 +46,10 @@ const batches = [
   ['vehicle', VEHICLES],
   ['property', PROPERTIES],
   ['boss', BOSSES],
+  ['job', jobItems],
 ];
 
-console.log('Generating AI PNG thumbnails...');
+console.log('Generating AI PNG thumbnails (standard aiImagePrompt)...');
 for (const [cat, items] of batches) {
   for (const item of items) {
     try {
@@ -60,4 +60,4 @@ for (const [cat, items] of batches) {
     }
   }
 }
-console.log('Done.');
+console.log('Done. Run optimize-thumbnails.js to convert PNG → WebP.');

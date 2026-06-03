@@ -65,12 +65,17 @@ export default function PlayerProfilePage() {
       </div>
 
       <div className="card">
-        <h3 className="font-semibold text-sm mb-2">Equipped</h3>
+        <h3 className="font-semibold text-sm mb-2">Gear (from owned inventory)</h3>
         <div className="space-y-1 text-sm text-gray-300">
-          <p>⚔️ {profile.equipped?.weapon || 'None'}</p>
-          <p>🛡 {profile.equipped?.armor || 'None'}</p>
-          <p>🚗 {profile.equipped?.vehicle || 'None'}</p>
+          <p>⚔️ {profile.gear?.weapon ? `${profile.gear.weapon.name} ×${profile.gear.weapon.qty}` : 'No weapons owned'}</p>
+          <p>🛡 {profile.gear?.armor ? `${profile.gear.armor.name} ×${profile.gear.armor.qty}` : 'No armor owned'}</p>
+          <p>🚗 {profile.gear?.vehicle ? `${profile.gear.vehicle.name} ×${profile.gear.vehicle.qty}` : 'No vehicles owned'}</p>
         </div>
+        {profile.ownedTotals && (
+          <p className="text-[10px] text-gray-500 mt-2">
+            Owned: {profile.ownedTotals.weapon || 0} weapons · {profile.ownedTotals.armor || 0} armor · {profile.ownedTotals.property || 0} properties
+          </p>
+        )}
       </div>
 
       {profile.referral_code && (

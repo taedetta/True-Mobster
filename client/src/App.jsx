@@ -18,6 +18,7 @@ import MailPage from './pages/MailPage';
 import MorePage from './pages/MorePage';
 import ChatPage from './pages/ChatPage';
 import HospitalPage from './pages/HospitalPage';
+import GodfatherPage from './pages/GodfatherPage';
 import RevengePage from './pages/RevengePage';
 import { Toast, LoadingScreen } from './components/UI';
 
@@ -52,6 +53,8 @@ export default function App() {
           <Route path="mail" element={<MailPage />} />
           <Route path="chat" element={<ChatPage />} />
           <Route path="hospital" element={<HospitalPage />} />
+          <Route path="godfather" element={<GodfatherPage />} />
+          <Route path="gold" element={<Navigate to="/godfather" replace />} />
           <Route path="revenge" element={<RevengePage />} />
           <Route path="hitlist" element={<HitlistPage />} />
           <Route path="crew" element={<CrewPage />} />

@@ -1,5 +1,6 @@
 import { formatMoney } from '../api';
 import ItemImage from './ItemImage';
+import { useState } from 'react';
 
 function formatCountdown(isoOrMs) {
   if (!isoOrMs) return null;
@@ -91,7 +92,7 @@ export function PlayerHeader({ state }) {
 
           <p className="text-xs text-gray-500 mt-0.5">Bank: {formatMoney(state.bank_balance)}</p>
 
-          {(state.gold || 0) > 0 && <p className="text-xs text-amber-400">{state.gold} gold</p>}
+          {(state.favor_points || state.gold || 0) > 0 && <p className="text-xs text-purple-300">{state.favor_points ?? state.gold} Favor</p>}
 
         </div>
 
@@ -169,65 +170,74 @@ export function PlayerHeader({ state }) {
 
 
 
-export function ItemCard({ item, owned, ownedQty = 0, equipped, onBuy, onEquip, playerLevel, playerMoney, useGold = false, stackable = false }) {
-
-  const canAfford = useGold && item.goldPrice ? playerMoney >= item.goldPrice : playerMoney >= item.price;
-
-  const canBuy = playerLevel >= item.minLevel && canAfford && (stackable || !owned);
-
+export function ShopItemCard({ item, ownedQty = 0, playerLevel, playerMoney, onBuy, onSell, showSell = false }) {
+  const [qty, setQty] = useState(1);
+  const unitPrice = item.price || 0;
+  const maxBuy = unitPrice > 0 ? Math.floor(playerMoney / unitPrice) : 0;
+  const maxQty = showSell ? ownedQty : maxBuy;
+  const canBuy = playerLevel >= item.minLevel && maxBuy >= 1;
   const statLabel = item.attack ? `+${item.attack} ATK` : item.defense ? `+${item.defense} DEF` : item.income ? `$${item.income}/hr` : '';
   const upkeepLabel = item.upkeep > 0 ? `$${item.upkeep}/hr upkeep` : '';
 
-
+  const setMax = () => setQty(Math.max(1, maxQty || 1));
 
   return (
-
-    <div className={`group card flex flex-col items-center text-center transition-all duration-200 hover:border-mob-gold/30 hover:shadow-glow ${equipped ? 'ring-2 ring-mob-gold shadow-glow' : ''}`}>
-
+    <div className="group card flex flex-col items-center text-center transition-all duration-200 hover:border-mob-gold/30">
       <div className="relative mb-3 flex items-center justify-center">
         <ItemImage src={item.thumbnail} alt={item.name} size="card" />
-
-        {equipped && <span className="absolute -top-1 -right-1 bg-mob-gold text-black text-[10px] font-bold px-2 py-0.5 rounded-full">ON</span>}
-
-        {ownedQty > 0 && stackable && <span className="absolute -top-1 -left-1 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">×{ownedQty}</span>}
-
-        {item.tier > 1 && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] text-mob-gold">{'★'.repeat(Math.min(item.tier, 5))}</span>}
-
+        {ownedQty > 0 && (
+          <span className="absolute -top-1 -left-1 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+            Own {ownedQty.toLocaleString()}
+          </span>
+        )}
       </div>
-
       <h3 className="font-semibold text-sm text-gray-100 leading-tight px-1">{item.name}</h3>
-
       <p className="text-xs text-mob-gold mt-1 font-medium">{statLabel}</p>
       {upkeepLabel && <p className="text-xs text-red-400">{upkeepLabel}</p>}
+      <p className="text-xs text-gray-500 mt-1">Lv.{item.minLevel}+ · {formatMoney(unitPrice)} each</p>
 
-      <p className="text-xs text-gray-500 mt-1">Lv.{item.minLevel}+ · {useGold && item.goldPrice ? `${item.goldPrice} gold` : formatMoney(item.price)}</p>
-
-      {owned && !stackable ? (
-
-        item.category !== 'property' && onEquip && (
-
-          <button type="button" className="btn-secondary mt-3 text-xs w-full" onClick={() => onEquip(item)} disabled={equipped}>
-
-            {equipped ? 'Equipped' : 'Equip'}
-
+      <div className="w-full mt-3 space-y-2">
+        <div className="flex items-center gap-1">
+          <input
+            type="number"
+            min={1}
+            max={Math.max(1, maxQty || 1)}
+            value={qty}
+            onChange={(e) => setQty(Math.max(1, Math.min(Number(e.target.value) || 1, maxQty || 9999)))}
+            className="w-full px-2 py-1.5 rounded-lg bg-mob-bg border border-mob-border text-xs text-center"
+          />
+          <button type="button" className="btn-secondary text-[10px] px-2 py-1.5 whitespace-nowrap" onClick={setMax}>Max</button>
+        </div>
+        <div className="flex flex-wrap gap-1 justify-center">
+          {[1, 5, 10, 20, 50].map((n) => (
+            <button key={n} type="button" className="text-[10px] px-1.5 py-0.5 rounded border border-mob-border hover:border-mob-gold/50" onClick={() => setQty(Math.min(n, maxQty || n))}>{n}</button>
+          ))}
+        </div>
+        {showSell ? (
+          <button type="button" className="btn-secondary text-xs w-full" disabled={!ownedQty} onClick={() => onSell?.(item, qty)}>
+            Sell {qty} · {formatMoney(Math.floor(unitPrice * 0.5 * qty))}
           </button>
-
-        )
-
-      ) : (
-
-        <button type="button" className="btn-primary mt-3 text-xs w-full" onClick={() => onBuy(item)} disabled={!canBuy}>
-
-          {stackable && ownedQty > 0 ? 'Buy More' : 'Buy'}
-
-        </button>
-
-      )}
-
+        ) : (
+          <button type="button" className="btn-primary text-xs w-full" disabled={!canBuy} onClick={() => onBuy?.(item, qty)}>
+            Buy {qty} · {formatMoney(unitPrice * qty)}
+          </button>
+        )}
+      </div>
     </div>
-
   );
+}
 
+/** @deprecated use ShopItemCard */
+export function ItemCard({ item, owned, ownedQty = 0, equipped, onBuy, onEquip, playerLevel, playerMoney, useGold = false, stackable = false }) {
+  return (
+    <ShopItemCard
+      item={item}
+      ownedQty={ownedQty || (owned ? 1 : 0)}
+      playerLevel={playerLevel}
+      playerMoney={playerMoney}
+      onBuy={(i, q) => onBuy?.(i, q)}
+    />
+  );
 }
 
 

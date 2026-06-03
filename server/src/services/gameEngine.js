@@ -8,7 +8,8 @@ import {
   ICE_MAX_HOURS, BAIL_COST_PER_MINUTE, SELL_BACK_RATIO, SCRATCH_CARD_COST, BANK_FEE_PERCENT,
   DAILY_GIFTS_MAX, REFERRAL_BONUS, COLLECTIONS, BOT_NAMES, BASE_STATS, STAT_GROWTH_PER_LEVEL,
   generateReferralCode, GOLD_JOB_CHANCE, PROPERTY_MAX_STACK, DEFAULT_AVATARS, avatarUrl,
-  MOB_USABLE_PER_LEVEL, getMobBracket, GOLD_STORE, ECONOMY_TICK_MS, getItemById,
+  MOB_USABLE_PER_LEVEL, getMobBracket, GODFATHER_STORE, GOLD_STORE, ECONOMY_TICK_MS, getItemById,
+  ITEM_MAX_STACK, PROPERTY_MAX_STACK,
 } from '../../../shared/gameData.js';
 import db, { isPostgres } from '../db/index.js';
 import { getEffectiveMobSize, getMobAllies, getUnreadPmCount } from './chatEngine.js';
@@ -139,23 +140,42 @@ export async function getTerritoryBonusForCrew(crewId) {
   return bonus;
 }
 
+function calcGearStat(inventory, category, catalog, statKey, usableMob) {
+  const rows = (inventory || []).filter((i) => i.category === category);
+  const items = rows
+    .map((r) => {
+      const def = catalog.find((c) => c.id === r.item_id);
+      return def ? { ...def, qty: Number(r.quantity || 1) } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => (b[statKey] || 0) - (a[statKey] || 0));
+
+  let remaining = usableMob;
+  let total = 0;
+  for (const item of items) {
+    if (remaining <= 0) break;
+    const use = Math.min(remaining, item.qty);
+    total += (item[statKey] || 0) * use;
+    remaining -= use;
+  }
+  return total;
+}
+
 export async function getCombatStats(player, crewMemberCount = 0, inventory = []) {
-  const weaponAtk = getItemBonus(player.equipped_weapon, WEAPONS, 'attack');
-  const armorDef = getItemBonus(player.equipped_armor, ARMOR, 'defense');
-  const vehicleDef = getItemBonus(player.equipped_vehicle, VEHICLES, 'defense');
   const crewBonus = Math.min(CREW_MAX_BONUS, crewMemberCount * CREW_BONUS_PER_MEMBER);
   const effectiveMob = player.effective_mob_size ?? player.mob_size ?? 1;
   const usableMob = Math.min(effectiveMob, (player.level || 1) * MOB_USABLE_PER_LEVEL);
   const colBonus = getCollectionBonus(inventory);
   const territoryBonus = player.territory_bonus ?? 0;
-  // iMobsters: each mob member uses your equipment in fights
-  const mobAttack = weaponAtk * usableMob;
-  const mobDefense = (armorDef + vehicleDef) * usableMob;
+  const mobAttack = calcGearStat(inventory, 'weapon', WEAPONS, 'attack', usableMob);
+  const mobArmor = calcGearStat(inventory, 'armor', ARMOR, 'defense', usableMob);
+  const mobVehicle = calcGearStat(inventory, 'vehicle', VEHICLES, 'defense', usableMob);
   const attack = Math.floor((player.attack_skill + mobAttack + colBonus.attack) * (1 + crewBonus + territoryBonus));
-  const defense = Math.floor((player.defense_skill + mobDefense + colBonus.defense) * (1 + crewBonus + territoryBonus));
+  const defense = Math.floor((player.defense_skill + mobArmor + mobVehicle + colBonus.defense) * (1 + crewBonus + territoryBonus));
   return {
     attack, defense, crewBonus, mobBonus: usableMob / Math.max(1, effectiveMob),
     usableMob, effectiveMob, collectionBonus: colBonus, territoryBonus,
+    gearUsed: { attack: mobAttack, armor: mobArmor, vehicle: mobVehicle },
   };
 }
 
@@ -333,35 +353,30 @@ export async function processBotRetaliations() {
   }
 }
 
-export async function buyItem(userId, itemId, category, useGold = false) {
+export async function buyItem(userId, itemId, category, quantity = 1) {
+  const qty = Math.max(1, Math.floor(Number(quantity) || 1));
   const lists = { weapon: WEAPONS, armor: ARMOR, vehicle: VEHICLES, property: PROPERTIES, consumable: CONSUMABLES };
   const item = lists[category]?.find((i) => i.id === itemId);
   if (!item) throw new Error('Invalid item');
   const player = await getPlayerRow(userId);
   if (player.level < item.minLevel) throw new Error('Level too low');
-  const price = useGold ? item.goldPrice : item.price;
-  if (useGold) { if ((player.gold || 0) < price) throw new Error('Not enough gold'); }
-  else { if (player.money < price) throw new Error('Not enough money'); }
-  if (category === 'property') {
-    const owned = await db.get('SELECT quantity FROM inventory WHERE user_id=? AND item_id=? AND category=?', [userId, itemId, 'property']);
-    const qty = Number(owned?.quantity || 0);
-    if (qty >= PROPERTY_MAX_STACK) throw new Error(`Max ${PROPERTY_MAX_STACK} of this property`);
-  }
-  if (category !== 'consumable' && category !== 'property') {
-    const owned = await db.get('SELECT 1 FROM inventory WHERE user_id=? AND item_id=? AND category=?', [userId, itemId, category]);
-    if (owned) throw new Error('Already owned');
-  }
-  if (useGold) await db.run('UPDATE players SET gold=gold-? WHERE user_id=?', [price, userId]);
-  else {
-    await db.run('UPDATE players SET money=money-?, daily_spent=daily_spent+? WHERE user_id=?', [price, price, userId]);
-    await trackMission(userId, 'spent', price);
-  }
-  if (category === 'consumable') {
-    await db.run(`INSERT INTO inventory (user_id, item_id, category, quantity) VALUES (?, ?, ?, 1) ON CONFLICT(user_id, item_id) DO UPDATE SET quantity=inventory.quantity+1`, [userId, itemId, category]);
-  } else {
-    await db.run(`INSERT INTO inventory (user_id, item_id, category, quantity) VALUES (?, ?, ?, 1) ON CONFLICT(user_id, item_id) DO UPDATE SET quantity=inventory.quantity+1`, [userId, itemId, category]);
-  }
-  return item;
+  const unitPrice = item.price;
+  const totalPrice = unitPrice * qty;
+  if (player.money < totalPrice) throw new Error(`Not enough money — need ${totalPrice.toLocaleString()}`);
+
+  const owned = await db.get('SELECT quantity FROM inventory WHERE user_id=? AND item_id=? AND category=?', [userId, itemId, category]);
+  const ownedQty = Number(owned?.quantity || 0);
+  const maxStack = category === 'property' ? PROPERTY_MAX_STACK : ITEM_MAX_STACK;
+  if (ownedQty + qty > maxStack) throw new Error(`Max ${maxStack} of this item`);
+
+  await db.run('UPDATE players SET money=money-?, daily_spent=daily_spent+? WHERE user_id=?', [totalPrice, totalPrice, userId]);
+  await trackMission(userId, 'spent', totalPrice);
+  await db.run(
+    `INSERT INTO inventory (user_id, item_id, category, quantity) VALUES (?, ?, ?, ?)
+     ON CONFLICT(user_id, item_id) DO UPDATE SET quantity=inventory.quantity+excluded.quantity`,
+    [userId, itemId, category, qty],
+  );
+  return { item, quantity: qty, totalPrice, owned: ownedQty + qty };
 }
 
 export async function sellItem(userId, itemId, category, quantity = 1) {
@@ -740,22 +755,57 @@ export async function getNews(limit = 30) {
   }));
 }
 
-export async function buyGoldStoreItem(userId, packId) {
-  const pack = GOLD_STORE.find((p) => p.id === packId);
-  if (!pack) throw new Error('Invalid pack');
+export async function buyGodfatherItem(userId, packId, quantity = 1) {
+  const qty = Math.max(1, Math.floor(Number(quantity) || 1));
+  const pack = GODFATHER_STORE.find((p) => p.id === packId);
+  if (!pack) throw new Error('Invalid item');
   const player = await getPlayerRow(userId);
-  if (player.respect < pack.respectCost) throw new Error('Not enough respect');
-  await db.run('UPDATE players SET respect=respect-? WHERE user_id=?', [pack.respectCost, userId]);
+  const totalCost = pack.favorCost * qty;
+  if ((player.gold || 0) < totalCost) throw new Error(`Not enough Favor Points — need ${totalCost}`);
+
+  await db.run('UPDATE players SET gold=gold-? WHERE user_id=?', [totalCost, userId]);
+
   if (pack.effect === 'energy') {
     await db.run('UPDATE players SET energy=max_energy WHERE user_id=?', [userId]);
-    return { pack, effect: 'energy' };
+    return { pack, quantity: qty, favorSpent: totalCost };
   }
   if (pack.effect === 'stamina') {
     await db.run('UPDATE players SET stamina=max_stamina WHERE user_id=?', [userId]);
-    return { pack, effect: 'stamina' };
+    return { pack, quantity: qty, favorSpent: totalCost };
   }
-  await db.run('UPDATE players SET gold=gold+? WHERE user_id=?', [pack.gold, userId]);
-  return { pack, gold: pack.gold };
+  if (pack.effect === 'health') {
+    await db.run('UPDATE players SET health=max_health WHERE user_id=?', [userId]);
+    return { pack, quantity: qty, favorSpent: totalCost };
+  }
+  if (pack.effect === 'cash') {
+    const cash = Math.floor((pack.cashPerLevel || 500) * player.level * qty);
+    await db.run('UPDATE players SET money=money+? WHERE user_id=?', [cash, userId]);
+    return { pack, quantity: qty, favorSpent: totalCost, cash };
+  }
+  if (pack.effect === 'mob') {
+    const add = (pack.amount || 1) * qty;
+    const newMob = Math.min(MOB_MAX_SIZE, player.mob_size + add);
+    await db.run('UPDATE players SET mob_size=? WHERE user_id=?', [newMob, userId]);
+    return { pack, quantity: qty, favorSpent: totalCost, mobAdded: newMob - player.mob_size };
+  }
+  if (pack.effect === 'xp_boost') {
+    const hours = (pack.amount || 2) * qty;
+    await db.run('UPDATE players SET xp_boost_until=? WHERE user_id=?',
+      [new Date(Date.now() + hours * 3600000).toISOString(), userId]);
+    return { pack, quantity: qty, favorSpent: totalCost };
+  }
+  if (pack.effect === 'ice') {
+    const hours = (pack.amount || 4) * qty;
+    await db.run('UPDATE players SET iced_until=? WHERE user_id=?',
+      [new Date(Date.now() + hours * 3600000).toISOString(), userId]);
+    return { pack, quantity: qty, favorSpent: totalCost };
+  }
+  throw new Error('Unknown Godfather item');
+}
+
+/** @deprecated */
+export async function buyGoldStoreItem(userId, packId, quantity = 1) {
+  return buyGodfatherItem(userId, packId, quantity);
 }
 
 export function getCollectionProgress(inventory) {
@@ -789,14 +839,32 @@ export async function getRevengeList(userId) {
     WHERE cl.defender_id=? AND cl.attacker_won=1 ORDER BY cl.created_at DESC LIMIT 20`, [userId]);
 }
 
+function getBestGear(inventory, category, catalog, statKey) {
+  let best = null;
+  for (const row of inventory || []) {
+    if (row.category !== category) continue;
+    const def = catalog.find((c) => c.id === row.item_id);
+    if (!def) continue;
+    const stat = def[statKey] || 0;
+    if (!best || stat > best.stat) best = { name: def.name, qty: Number(row.quantity || 1), stat };
+  }
+  return best;
+}
+
 export async function getPlayerProfile(userId) {
   const player = await getPlayerRow(userId);
   if (!player) throw new Error('Player not found');
   const inventory = await db.all('SELECT * FROM inventory WHERE user_id=?', [userId]);
   const combat = await getCombatStats(player, await getCrewMemberCount(player.crew_id), inventory);
-  const weapon = WEAPONS.find((i) => i.id === player.equipped_weapon);
-  const armor = ARMOR.find((i) => i.id === player.equipped_armor);
-  const vehicle = VEHICLES.find((i) => i.id === player.equipped_vehicle);
+  const gear = {
+    weapon: getBestGear(inventory, 'weapon', WEAPONS, 'attack'),
+    armor: getBestGear(inventory, 'armor', ARMOR, 'defense'),
+    vehicle: getBestGear(inventory, 'vehicle', VEHICLES, 'defense'),
+  };
+  const ownedTotals = inventory.reduce((acc, row) => {
+    acc[row.category] = (acc[row.category] || 0) + Number(row.quantity || 1);
+    return acc;
+  }, {});
   return {
     user_id: player.user_id,
     display_name: player.display_name,
@@ -811,11 +879,8 @@ export async function getPlayerProfile(userId) {
     avatar_url: avatarUrl(player),
     combat,
     inventory,
-    equipped: {
-      weapon: weapon?.name || null,
-      armor: armor?.name || null,
-      vehicle: vehicle?.name || null,
-    },
+    gear,
+    ownedTotals,
   };
 }
 
@@ -935,7 +1000,9 @@ export async function buildPlayerState(userId) {
     referralCode: player.referral_code,
     avatar_url: avatarUrl(player),
     defaultAvatars: DEFAULT_AVATARS,
-    goldStore: GOLD_STORE,
+    goldStore: GODFATHER_STORE,
+    godfatherStore: GODFATHER_STORE,
+    favor_points: player.gold || 0,
   };
 }
 

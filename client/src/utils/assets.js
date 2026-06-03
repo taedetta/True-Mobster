@@ -1,4 +1,4 @@
-export const ASSET_VERSION = '2.3.0';
+export const ASSET_VERSION = '2.3.1';
 
 export function uiAsset(name) {
   return `/assets/ui/${name}.webp?v=${ASSET_VERSION}`;

@@ -1,0 +1,88 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useGame } from '../context/GameContext';
+import { formatMoney } from '../api';
+import { uiAsset } from '../utils/assets';
+
+export default function GodfatherPage() {
+  const { state, action, catalog } = useGame();
+  const [quantities, setQuantities] = useState({});
+
+  if (!state) return null;
+
+  const packs = catalog?.godfatherStore || catalog?.goldStore || state.godfatherStore || [];
+  const favor = state.favor_points ?? state.gold ?? 0;
+
+  const getQty = (id) => quantities[id] ?? 1;
+  const setQty = (id, v) => setQuantities((q) => ({ ...q, [id]: Math.max(1, v) }));
+
+  const maxQty = (pack) => Math.max(1, Math.floor(favor / pack.favorCost));
+
+  const buy = (pack) => {
+    const qty = getQty(pack.id);
+    action('/godfather/buy', { packId: pack.id, quantity: qty }, `Traded ${qty}x ${pack.name} with the Godfather!`);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="card-premium flex gap-4 items-start">
+        <img src={uiAsset('godfather')} alt="The Godfather" className="w-24 h-24 rounded-xl border-2 border-mob-gold object-cover bg-mob-bg flex-shrink-0" />
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-mob-gold/80">Specialty Shop</p>
+          <h2 className="font-display text-xl text-mob-gold">The Godfather</h2>
+          <p className="text-xs text-gray-400 mt-1">
+            Trade Favor Points for refills, hired guns, cash, and elite bonuses — just like iMobsters.
+          </p>
+          <p className="text-lg font-bold text-purple-300 mt-2">{favor} Favor Points</p>
+          <p className="text-[10px] text-gray-500">Earn favor from jobs, daily login & achievements</p>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {packs.map((pack) => {
+          const qty = getQty(pack.id);
+          const cost = pack.favorCost * qty;
+          const max = maxQty(pack);
+          return (
+            <div key={pack.id} className="card space-y-3">
+              <div className="flex justify-between items-start gap-3">
+                <div>
+                  <p className="font-semibold text-sm">{pack.icon} {pack.name}</p>
+                  <p className="text-xs text-gray-400">{pack.favorCost} favor each</p>
+                  {pack.effect === 'cash' && <p className="text-xs text-green-400">≈ {formatMoney((pack.cashPerLevel || 500) * state.level * qty)}</p>}
+                  {pack.effect === 'mob' && <p className="text-xs text-purple-300">+{(pack.amount || 1) * qty} mob</p>}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={max}
+                  value={qty}
+                  onChange={(e) => setQty(pack.id, Math.min(Number(e.target.value) || 1, max))}
+                  className="w-20 px-2 py-1.5 rounded-lg bg-mob-bg border border-mob-border text-xs text-center"
+                />
+                <button type="button" className="btn-secondary text-[10px] px-2" onClick={() => setQty(pack.id, max)}>Max</button>
+                <div className="flex gap-1">
+                  {[1, 5, 10, 50].map((n) => (
+                    <button key={n} type="button" className="text-[10px] px-1.5 py-0.5 rounded border border-mob-border" onClick={() => setQty(pack.id, Math.min(n, max))}>{n}</button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary text-xs ml-auto flex-shrink-0"
+                  disabled={favor < cost}
+                  onClick={() => buy(pack)}
+                >
+                  Trade {cost} favor
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <Link to="/" className="btn-secondary w-full text-sm text-center block">← Back Home</Link>
+    </div>
+  );
+}

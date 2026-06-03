@@ -33,6 +33,7 @@ export const BAIL_COST_PER_MINUTE = 50;
 export const SELL_BACK_RATIO = 0.5;
 export const SCRATCH_CARD_COST = 1000;
 export const GOLD_JOB_CHANCE = 0.02;
+export const FAVOR_JOB_CHANCE = GOLD_JOB_CHANCE;
 export const DAILY_GIFTS_MAX = 10;
 export const REFERRAL_BONUS = 5000;
 
@@ -235,7 +236,7 @@ export function getItemById(id) {
   return ALL_ITEMS.find((i) => i.id === id) || JOBS.find((j) => j.id === id) || LOCATIONS.find((l) => l.id === id) || BOSSES.find((b) => b.id === id);
 }
 
-export const ASSET_VERSION = '2.3.0';
+export const ASSET_VERSION = '2.3.1';
 
 export function itemThumbnailPath(category, id) {
   return `/assets/items/${category}_${id}.webp?v=${ASSET_VERSION}`;
@@ -261,6 +262,9 @@ export function catalogItems(catalog, category) {
 }
 
 export const PROPERTY_MAX_STACK = 999;
+/** iMobsters: stack unlimited gear & real estate (practical cap) */
+export const ITEM_MAX_STACK = 9999;
+export const SHOP_BUY_PRESETS = [1, 2, 3, 4, 5, 10, 20, 50];
 
 export const DEFAULT_AVATARS = [
   { id: 'default_01', name: 'Don', emoji: '🎩', color: '#fbbf24' },
@@ -301,11 +305,17 @@ export function getMobBracket(mobSize) {
   return { min: 5 + bracketIndex * 5, max: 9 + bracketIndex * 5 };
 }
 
-export const GOLD_STORE = [
-  { id: 'gold_10', name: '10 Gold', gold: 10, respectCost: 500, icon: '🪙' },
-  { id: 'gold_25', name: '25 Gold', gold: 25, respectCost: 1200, icon: '🪙' },
-  { id: 'gold_60', name: '60 Gold', gold: 60, respectCost: 2500, icon: '💰' },
-  { id: 'gold_125', name: '125 Gold', gold: 125, respectCost: 5000, icon: '💎' },
-  { id: 'energy_refill', name: 'Full Energy', gold: 8, respectCost: 400, effect: 'energy', icon: '⚡' },
-  { id: 'stamina_refill', name: 'Full Stamina', gold: 6, respectCost: 300, effect: 'stamina', icon: '💪' },
+/** The Godfather specialty shop — spend Favor Points (stored in players.gold column) */
+export const GODFATHER_STORE = [
+  { id: 'energy_refill', name: 'Full Energy Refill', favorCost: 8, effect: 'energy', icon: '⚡' },
+  { id: 'stamina_refill', name: 'Full Stamina Refill', favorCost: 6, effect: 'stamina', icon: '💪' },
+  { id: 'health_refill', name: 'Full Health Refill', favorCost: 8, effect: 'health', icon: '❤️' },
+  { id: 'cash_bundle', name: 'Cash Bundle', favorCost: 15, effect: 'cash', cashPerLevel: 500, icon: '💵' },
+  { id: 'hired_gun', name: 'Hired Gun (+1 Mob)', favorCost: 25, effect: 'mob', amount: 1, icon: '🕴️' },
+  { id: 'mob_squad', name: 'Mob Squad (+5 Mob)', favorCost: 30, effect: 'mob', amount: 5, icon: '👥' },
+  { id: 'xp_boost', name: 'XP Boost (2hr)', favorCost: 12, effect: 'xp_boost', amount: 2, icon: '⭐' },
+  { id: 'ice_pack', name: 'Ice Protection (4hr)', favorCost: 10, effect: 'ice', amount: 4, icon: '🧊' },
 ];
+
+/** @deprecated use GODFATHER_STORE */
+export const GOLD_STORE = GODFATHER_STORE;

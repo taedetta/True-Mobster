@@ -5,7 +5,7 @@ import { PlayerHeader } from '../components/UI';
 import { uiAsset } from '../utils/assets';
 
 const tabs = [
-  { to: '/', asset: 'nav-home', label: 'Godfather' },
+  { to: '/', asset: 'nav-home', label: 'Home' },
   { to: '/jobs', asset: 'nav-jobs', label: 'Jobs' },
   { to: '/fight', asset: 'nav-fight', label: 'Fight' },
   { to: '/shop', asset: 'nav-shop', label: 'Shop' },

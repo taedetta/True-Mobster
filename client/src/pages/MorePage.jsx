@@ -4,6 +4,7 @@ import { formatMoney } from '../api';
 import { uiAsset } from '../utils/assets';
 
 const LINKS = [
+  { to: '/godfather', asset: 'godfather', label: 'The Godfather' },
   { to: '/hitlist', asset: 'nav-hitlist', label: 'Hitlist' },
   { to: '/boss', asset: 'nav-boss', label: 'Boss Fights' },
   { to: '/crew', asset: 'nav-crew', label: 'Crew' },
@@ -41,7 +42,7 @@ export default function MorePage() {
       )}
 
       <div className="card text-xs text-gray-500 text-center">
-        True Mobsters v2.3 · iMobsters-style by VisionIt
+        True Mobsters v2.3.1 · iMobsters-style by VisionIt
       </div>
     </div>
   );
