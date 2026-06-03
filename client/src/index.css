@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply min-h-screen bg-mob-bg;
+    background-image:
+      radial-gradient(ellipse at top, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at bottom, rgba(220, 38, 38, 0.06) 0%, transparent 50%);
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 rounded-lg font-semibold bg-gradient-to-r from-mob-gold to-amber-600 text-black
+      hover:from-amber-400 hover:to-mob-gold transition-all shadow-glow active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-danger {
+    @apply px-4 py-2 rounded-lg font-semibold bg-gradient-to-r from-mob-crimson to-red-800 text-white
+      hover:from-red-500 hover:to-mob-crimson transition-all active:scale-95 disabled:opacity-40;
+  }
+  .btn-secondary {
+    @apply px-4 py-2 rounded-lg font-semibold bg-mob-card border border-mob-border text-gray-200
+      hover:border-mob-gold/50 transition-all active:scale-95 disabled:opacity-40;
+  }
+  .card {
+    @apply bg-mob-card border border-mob-border rounded-xl p-4 shadow-card;
+  }
+  .stat-bar {
+    @apply h-2 rounded-full bg-mob-border overflow-hidden;
+  }
+  .stat-fill-energy { @apply h-full bg-blue-500 transition-all duration-500; }
+  .stat-fill-stamina { @apply h-full bg-green-500 transition-all duration-500; }
+  .stat-fill-health { @apply h-full bg-red-500 transition-all duration-500; }
+  .stat-fill-xp { @apply h-full bg-mob-gold transition-all duration-500; }
+  .nav-tab {
+    @apply flex flex-col items-center gap-0.5 px-2 py-1 text-xs text-gray-400 transition-colors;
+  }
+  .nav-tab.active { @apply text-mob-gold; }
+  .item-grid {
+    @apply grid grid-cols-2 sm:grid-cols-3 gap-3;
+  }
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0a0a0f; }
+::-webkit-scrollbar-thumb { background: #2a2a3d; border-radius: 3px; }
