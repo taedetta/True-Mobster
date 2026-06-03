@@ -18,7 +18,7 @@ function write(category, items) {
   }
 }
 
-console.log('Generating high-quality item thumbnails (512×512)...');
+console.log('Generating premium SVG item thumbnails (1024×1024)...');
 write('weapon', WEAPONS);
 write('armor', ARMOR);
 write('vehicle', VEHICLES);
@@ -30,4 +30,4 @@ write('job', JOBS.map((j) => ({ ...j, color: LOCATIONS.find((l) => l.id === j.lo
 write('location', LOCATIONS.map((l) => ({ ...l, tier: 1 })));
 
 const total = WEAPONS.length + ARMOR.length + VEHICLES.length + PROPERTIES.length + CONSUMABLES.length + BOSSES.length + TERRITORIES.length + JOBS.length + LOCATIONS.length;
-console.log(`Done — ${total} item-specific thumbnails generated.`);
+console.log(`Done — ${total} SVG thumbnails.`);

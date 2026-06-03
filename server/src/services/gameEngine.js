@@ -113,6 +113,7 @@ export async function addXp(player, amount) {
   let { level, xp, skill_points, max_energy, max_stamina, max_health, user_id } = player;
   xp += amount;
   let leveled = false;
+  let levelUps = 0;
   while (xp >= LEVEL_XP(level)) {
     xp -= LEVEL_XP(level);
     level += 1;
@@ -121,9 +122,17 @@ export async function addXp(player, amount) {
     max_stamina += 1;
     max_health += 10;
     leveled = true;
+    levelUps += 1;
   }
-  await db.run(`UPDATE players SET level=?, xp=?, skill_points=?, max_energy=?, max_stamina=?, max_health=?, energy=?, health=? WHERE user_id=?`,
-    [level, xp, skill_points, max_energy, max_stamina, max_health, Math.min(max_energy, player.energy + 2), max_health, user_id]);
+  if (leveled) {
+    const current = await db.get('SELECT energy, health FROM players WHERE user_id=?', [user_id]);
+    const energyNow = Number(current?.energy ?? player.energy);
+    const newEnergy = Math.min(max_energy, energyNow + levelUps * 2);
+    await db.run(`UPDATE players SET level=?, xp=?, skill_points=?, max_energy=?, max_stamina=?, max_health=?, energy=?, health=? WHERE user_id=?`,
+      [level, xp, skill_points, max_energy, max_stamina, max_health, newEnergy, max_health, user_id]);
+  } else {
+    await db.run('UPDATE players SET xp=? WHERE user_id=?', [xp, user_id]);
+  }
   return { leveled, level, xp, skill_points };
 }
 

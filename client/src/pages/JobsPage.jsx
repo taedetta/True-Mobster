@@ -16,8 +16,8 @@ export default function JobsPage() {
     setBusy(job.id);
     try {
       const result = await action('/job', { jobId: job.id });
-      if (result?.success) showMessage(`Earned ${formatMoney(result.money)}!`, 'success');
-      else if (result) showMessage('Job failed — sent to jail!', 'error');
+      if (result?.success) showMessage(`Earned ${formatMoney(result.money)}! (-${job.energy} energy)`, 'success');
+      else if (result) showMessage(`Job failed — sent to jail! (-${job.energy} energy)`, 'error');
     } catch { /* handled */ }
     setBusy(null);
   };
@@ -45,7 +45,13 @@ export default function JobsPage() {
       <div className="space-y-3">
         {jobs.map((job) => (
           <div key={job.id} className="card flex gap-3 items-center">
-            <img src={job.thumbnail} alt={job.name} className="item-img w-20 h-20 flex-shrink-0" loading="lazy" />
+            <img
+              src={job.thumbnail}
+              alt={job.name}
+              className="item-img w-24 h-24 flex-shrink-0"
+              loading="lazy"
+              onError={(e) => { if (e.currentTarget.src.endsWith('.png')) e.currentTarget.src = job.thumbnail.replace('.png', '.svg'); }}
+            />
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-sm">{job.name}</h3>
               <p className="text-xs text-gray-400 mt-1">

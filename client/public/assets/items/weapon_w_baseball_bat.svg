@@ -1,23 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <radialGradient id="bg_weapon_BaseballBat" cx="50%" cy="35%" r="70%">
-      <stop offset="0%" stop-color="#b45309" stop-opacity="0.95"/>
-      <stop offset="55%" stop-color="#1a1a2e" stop-opacity="1"/>
-      <stop offset="100%" stop-color="#0a0a0f" stop-opacity="1"/>
+    <radialGradient id="bg_weapon_w_baseball_bat" cx="50%" cy="42%" r="65%">
+      <stop offset="0%" stop-color="#b45309" stop-opacity="0.55"/>
+      <stop offset="45%" stop-color="#12121c"/>
+      <stop offset="100%" stop-color="#06060a"/>
     </radialGradient>
-    <linearGradient id="shine_weapon_BaseballBat" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35"/>
+    <radialGradient id="spot_weapon_w_baseball_bat" cx="35%" cy="28%" r="45%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22"/>
       <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="floor_weapon_w_baseball_bat" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#94a3b8" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#94a3b8" stop-opacity="0"/>
     </linearGradient>
-    <filter id="glow_weapon_BaseballBat"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="shadow_weapon_BaseballBat"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.55"/></filter>
+    <filter id="shadow_weapon_w_baseball_bat"><feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#000" flood-opacity="0.65"/></filter>
+    <filter id="glow_weapon_w_baseball_bat"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>
-  <rect width="512" height="512" rx="48" fill="url(#bg_weapon_BaseballBat)"/>
-  <rect x="16" y="16" width="480" height="480" rx="40" fill="none" stroke="#fbbf24" stroke-opacity="0.35" stroke-width="3"/>
-  <ellipse cx="256" cy="420" rx="140" ry="28" fill="#000" opacity="0.35"/>
-  <g filter="url(#shadow_weapon_BaseballBat)"><g transform="translate(256,250) rotate(25)"><ellipse cx="0" cy="-80" rx="28" ry="100" fill="#92400e" stroke="#78350f" stroke-width="3"/><rect x="-12" y="20" width="24" height="90" rx="8" fill="#a16207"/><ellipse cx="0" cy="115" rx="18" ry="12" fill="#78350f"/></g></g>
-  <rect x="24" y="24" width="200" height="80" rx="16" fill="url(#shine_weapon_BaseballBat)" opacity="0.12"/>
-  <text x="256" y="468" text-anchor="middle" fill="#fef3c7" font-family="Georgia, serif" font-size="28" font-weight="bold" filter="url(#glow_weapon_BaseballBat)">Baseball Bat</text>
-  <text x="256" y="498" text-anchor="middle" fill="#fbbf24" font-family="Georgia, serif" font-size="22">★</text>
+  <rect width="1024" height="1024" fill="url(#bg_weapon_w_baseball_bat)"/>
+  <rect width="1024" height="1024" fill="url(#spot_weapon_w_baseball_bat)"/>
+  <ellipse cx="512" cy="860" rx="320" ry="48" fill="url(#floor_weapon_w_baseball_bat)"/>
+  <ellipse cx="512" cy="870" rx="220" ry="28" fill="#000" opacity="0.45"/>
+  <g filter="url(#shadow_weapon_w_baseball_bat)"><g transform="translate(512,500) rotate(28)"><defs><linearGradient id="w_w_baseball_bat" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#d4a574"/><stop offset="40%" stop-color="#92400e"/><stop offset="100%" stop-color="#5c2e0a"/></linearGradient></defs><ellipse cx="0" cy="-200" rx="56" ry="210" fill="url(#w_w_baseball_bat)" stroke="#78350f" stroke-width="5"/><rect x="-28" y="10" width="56" height="200" rx="14" fill="url(#w_w_baseball_bat)"/><ellipse cx="0" cy="230" rx="42" ry="28" fill="#5c2e0a"/></g></g>
+  <rect x="48" y="48" width="928" height="928" rx="56" fill="none" stroke="#94a3b8" stroke-opacity="0.25" stroke-width="4"/>
 </svg>

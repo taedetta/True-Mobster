@@ -1,23 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <radialGradient id="bg_vehicle_WarRig" cx="50%" cy="35%" r="70%">
-      <stop offset="0%" stop-color="#7f1d1d" stop-opacity="0.95"/>
-      <stop offset="55%" stop-color="#1a1a2e" stop-opacity="1"/>
-      <stop offset="100%" stop-color="#0a0a0f" stop-opacity="1"/>
+    <radialGradient id="bg_vehicle_v_war_rig" cx="50%" cy="42%" r="65%">
+      <stop offset="0%" stop-color="#7f1d1d" stop-opacity="0.55"/>
+      <stop offset="45%" stop-color="#12121c"/>
+      <stop offset="100%" stop-color="#06060a"/>
     </radialGradient>
-    <linearGradient id="shine_vehicle_WarRig" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35"/>
+    <radialGradient id="spot_vehicle_v_war_rig" cx="35%" cy="28%" r="45%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22"/>
       <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="floor_vehicle_v_war_rig" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c4b5fd" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#c4b5fd" stop-opacity="0"/>
     </linearGradient>
-    <filter id="glow_vehicle_WarRig"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="shadow_vehicle_WarRig"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.55"/></filter>
+    <filter id="shadow_vehicle_v_war_rig"><feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#000" flood-opacity="0.65"/></filter>
+    <filter id="glow_vehicle_v_war_rig"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>
-  <rect width="512" height="512" rx="48" fill="url(#bg_vehicle_WarRig)"/>
-  <rect x="16" y="16" width="480" height="480" rx="40" fill="none" stroke="#fbbf24" stroke-opacity="0.35" stroke-width="3"/>
-  <ellipse cx="256" cy="420" rx="140" ry="28" fill="#000" opacity="0.35"/>
-  <g filter="url(#shadow_vehicle_WarRig)"><g transform="translate(256,265)"><rect x="-110" y="-45" width="220" height="65" rx="10" fill="#1f2937" stroke="#4b5563"/><rect x="-75" y="-75" width="150" height="35" rx="6" fill="#374151"/><circle cx="-65" cy="25" r="30" fill="#111"/><circle cx="65" cy="25" r="30" fill="#111"/></g></g>
-  <rect x="24" y="24" width="200" height="80" rx="16" fill="url(#shine_vehicle_WarRig)" opacity="0.12"/>
-  <text x="256" y="468" text-anchor="middle" fill="#fef3c7" font-family="Georgia, serif" font-size="28" font-weight="bold" filter="url(#glow_vehicle_WarRig)">War Rig</text>
-  <text x="256" y="498" text-anchor="middle" fill="#fbbf24" font-family="Georgia, serif" font-size="22">★★★</text>
+  <rect width="1024" height="1024" fill="url(#bg_vehicle_v_war_rig)"/>
+  <rect width="1024" height="1024" fill="url(#spot_vehicle_v_war_rig)"/>
+  <ellipse cx="512" cy="860" rx="320" ry="48" fill="url(#floor_vehicle_v_war_rig)"/>
+  <ellipse cx="512" cy="870" rx="220" ry="28" fill="#000" opacity="0.45"/>
+  <g filter="url(#shadow_vehicle_v_war_rig)"><g transform="translate(512,560)"><rect x="-240" y="-60" width="480" height="100" rx="24" fill="#374151" stroke="#111"/><rect x="-160" y="-120" width="320" height="70" rx="16" fill="#4b5563"/><circle cx="-140" cy="50" r="56" fill="#111" stroke="#333" stroke-width="8"/><circle cx="140" cy="50" r="56" fill="#111" stroke="#333" stroke-width="8"/></g></g>
+  <rect x="48" y="48" width="928" height="928" rx="56" fill="none" stroke="#c4b5fd" stroke-opacity="0.25" stroke-width="4"/>
 </svg>

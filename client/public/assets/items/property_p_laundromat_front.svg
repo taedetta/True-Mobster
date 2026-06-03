@@ -1,23 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <radialGradient id="bg_property_LaundromatFront" cx="50%" cy="35%" r="70%">
-      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.95"/>
-      <stop offset="55%" stop-color="#1a1a2e" stop-opacity="1"/>
-      <stop offset="100%" stop-color="#0a0a0f" stop-opacity="1"/>
+    <radialGradient id="bg_property_p_laundromat_front" cx="50%" cy="42%" r="65%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.55"/>
+      <stop offset="45%" stop-color="#12121c"/>
+      <stop offset="100%" stop-color="#06060a"/>
     </radialGradient>
-    <linearGradient id="shine_property_LaundromatFront" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35"/>
+    <radialGradient id="spot_property_p_laundromat_front" cx="35%" cy="28%" r="45%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22"/>
       <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="floor_property_p_laundromat_front" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#94a3b8" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#94a3b8" stop-opacity="0"/>
     </linearGradient>
-    <filter id="glow_property_LaundromatFront"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="shadow_property_LaundromatFront"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.55"/></filter>
+    <filter id="shadow_property_p_laundromat_front"><feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#000" flood-opacity="0.65"/></filter>
+    <filter id="glow_property_p_laundromat_front"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>
-  <rect width="512" height="512" rx="48" fill="url(#bg_property_LaundromatFront)"/>
-  <rect x="16" y="16" width="480" height="480" rx="40" fill="none" stroke="#fbbf24" stroke-opacity="0.35" stroke-width="3"/>
-  <ellipse cx="256" cy="420" rx="140" ry="28" fill="#000" opacity="0.35"/>
-  <g filter="url(#shadow_property_LaundromatFront)"><g transform="translate(256,260)"><rect x="-80" y="-60" width="160" height="110" fill="#84cc16" stroke="#65a30d"/><rect x="-60" y="-30" width="50" height="40" fill="#422006" opacity="0.3"/><rect x="10" y="-30" width="50" height="40" fill="#422006" opacity="0.3"/><rect x="-20" y="10" width="40" height="40" fill="#78350f"/></g></g>
-  <rect x="24" y="24" width="200" height="80" rx="16" fill="url(#shine_property_LaundromatFront)" opacity="0.12"/>
-  <text x="256" y="468" text-anchor="middle" fill="#fef3c7" font-family="Georgia, serif" font-size="28" font-weight="bold" filter="url(#glow_property_LaundromatFront)">Laundromat Front</text>
-  <text x="256" y="498" text-anchor="middle" fill="#fbbf24" font-family="Georgia, serif" font-size="22">★</text>
+  <rect width="1024" height="1024" fill="url(#bg_property_p_laundromat_front)"/>
+  <rect width="1024" height="1024" fill="url(#spot_property_p_laundromat_front)"/>
+  <ellipse cx="512" cy="860" rx="320" ry="48" fill="url(#floor_property_p_laundromat_front)"/>
+  <ellipse cx="512" cy="870" rx="220" ry="28" fill="#000" opacity="0.45"/>
+  <g filter="url(#shadow_property_p_laundromat_front)"><g transform="translate(512,520)"><rect x="-160" y="-140" width="320" height="260" rx="12" fill="#6366f1" stroke="#818cf8" stroke-width="5"/><rect x="-120" y="-80" width="80" height="60" rx="4" fill="#fbbf24" opacity="0.7"/><rect x="40" y="-80" width="80" height="60" rx="4" fill="#fbbf24" opacity="0.7"/><rect x="-40" y="40" width="80" height="80" fill="#312e81"/></g></g>
+  <rect x="48" y="48" width="928" height="928" rx="56" fill="none" stroke="#94a3b8" stroke-opacity="0.25" stroke-width="4"/>
 </svg>

@@ -220,7 +220,16 @@ export default function ShopPage() {
 
             <div key={item.id} className="card flex gap-3 items-center">
 
-              <img src={item.thumbnail || `/assets/items/consumable_${item.id}.svg`} alt={item.name} className="item-img w-20 h-20 flex-shrink-0" loading="lazy" />
+              <img
+                src={item.thumbnail || `/assets/items/consumable_${item.id}.png`}
+                alt={item.name}
+                className="item-img w-24 h-24 flex-shrink-0"
+                loading="lazy"
+                onError={(e) => {
+                  const src = e.currentTarget.src;
+                  if (src.endsWith('.png')) e.currentTarget.src = src.replace('.png', '.svg');
+                }}
+              />
 
               <div className="flex-1 min-w-0">
 

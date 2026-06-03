@@ -55,7 +55,7 @@ app.use('/api/game/buy', actionLimiter);
 app.use('/assets/items', express.static(path.join(__dirname, '../../client/public/assets/items')));
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', game: GAME_NAME, studio: STUDIO, version: '2.0.2' });
+  res.json({ status: 'ok', game: GAME_NAME, studio: STUDIO, version: '2.0.3' });
 });
 
 app.use('/api/auth', authRoutes);
