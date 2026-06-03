@@ -231,7 +231,7 @@ export function getItemById(id) {
 }
 
 export function itemThumbnailPath(category, id) {
-  return `/assets/items/${category}_${id}.webp`;
+  return `/assets/items/${category}_${id}.webp?v=2.2.1`;
 }
 
 export const PROPERTY_MAX_STACK = 999;

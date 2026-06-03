@@ -142,7 +142,7 @@ export default function ShopPage() {
         <div className="space-y-2">
           {shopItems.map((item) => (
             <div key={item.id} className="card flex gap-3 items-center">
-              <ItemImage src={item.thumbnail || `/assets/items/consumable_${item.id}.webp`} alt={item.name} size="list" />
+              <ItemImage src={item.thumbnail || `/assets/items/consumable_${item.id}.webp?v=2.2.1`} alt={item.name} size="list" />
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-sm">{item.name}</h3>
                 <p className="text-xs text-gray-400">{item.effect} +{item.amount} · Lv.{item.minLevel}+</p>

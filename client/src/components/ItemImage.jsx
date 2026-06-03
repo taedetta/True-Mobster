@@ -4,8 +4,8 @@ export default function ItemImage({ src, alt, className = 'item-img', size = 'ca
 
   const fallback = (el) => {
     const url = el.currentTarget.src;
-    if (url.endsWith('.webp')) {
-      el.currentTarget.src = url.replace('.webp', '.svg');
+    if (url.endsWith('.webp') || url.includes('.webp?')) {
+      el.currentTarget.src = url.replace(/\.webp(\?.*)?$/, '.svg');
     }
   };
 
