@@ -17,6 +17,11 @@ function nowISO() { return new Date().toISOString(); }
 function parseTime(iso) { return new Date(iso || nowISO()).getTime(); }
 function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function todayStr() { return new Date().toISOString().slice(0, 10); }
+function dateStr(val) {
+  if (!val) return null;
+  if (val instanceof Date) return val.toISOString().slice(0, 10);
+  return String(val).slice(0, 10);
+}
 
 function getItemBonus(itemId, list, stat) {
   const item = list.find((i) => i.id === itemId);
@@ -137,7 +142,7 @@ async function trackMission(userId, type, amount = 1) {
   const today = todayStr();
   let progress = {};
   try { progress = JSON.parse(player.daily_mission_progress || '{}'); } catch { /* */ }
-  if (player.daily_mission_date !== today) {
+  if (dateStr(player.daily_mission_date) !== today) {
     progress = {};
     await db.run('UPDATE players SET daily_mission_date=?, daily_mission_progress=?, daily_mission_claimed=? WHERE user_id=?',
       [today, '{}', '[]', userId]);
@@ -433,7 +438,7 @@ export async function allocateSkill(userId, stat) {
 export async function claimDailyLogin(userId) {
   const player = await getPlayerRow(userId);
   const today = todayStr();
-  const lastClaim = player.last_daily_claim ? player.last_daily_claim.slice(0, 10) : null;
+  const lastClaim = dateStr(player.last_daily_claim);
   if (lastClaim === today) throw new Error('Already claimed today');
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
   let streak = lastClaim === yesterday ? (player.daily_streak || 0) + 1 : 1;
@@ -452,7 +457,7 @@ export async function getDailyMissions(userId) {
   const today = todayStr();
   let progress = {};
   try { progress = JSON.parse(player.daily_mission_progress || '{}'); } catch { /* */ }
-  if (player.daily_mission_date !== today) progress = {};
+  if (dateStr(player.daily_mission_date) !== today) progress = {};
   let claimed = [];
   try { claimed = JSON.parse(player.daily_mission_claimed || '[]'); } catch { /* */ }
   return DAILY_MISSIONS.map((m) => ({
@@ -742,7 +747,7 @@ export async function buildPlayerState(userId) {
   const combat = await getCombatStats(player, await getCrewMemberCount(player.crew_id), inventory);
   const unreadMail = await db.get('SELECT COUNT(*) as c FROM mail WHERE user_id=? AND read_status=0', [userId]);
   const missions = await getDailyMissions(userId);
-  const canClaimDaily = !player.last_daily_claim || player.last_daily_claim.slice(0, 10) !== todayStr();
+  const canClaimDaily = !player.last_daily_claim || dateStr(player.last_daily_claim) !== todayStr();
   return {
     ...player, is_bot: !!player.is_bot, inventory, crew, crewMembers, combat,
     xpNeeded: LEVEL_XP(player.level), regen: REGEN,
