@@ -12,7 +12,7 @@ export default function ScratchPage() {
     setResult(null);
     try {
       const data = await action('/meta/scratch', {}, 'Scratch card played!');
-      setResult(data.prize || data.result || data);
+      setResult({ label: data.prize, amount: data.amount, gold: data.gold, energy: data.energy, jackpot: data.jackpot });
     } catch { /* handled */ }
     setBusy(false);
   };
@@ -33,7 +33,7 @@ export default function ScratchPage() {
       {result && (
         <div className="card border-mob-gold/50 text-center animate-pulse">
           <h3 className="font-display text-xl text-mob-gold">{result.label || 'You won!'}</h3>
-          {result.money && <p className="text-green-400 mt-2">{formatMoney(result.money)}</p>}
+          {result.amount > 0 && <p className="text-green-400 mt-2">{formatMoney(result.amount)}</p>}
           {result.gold && <p className="text-amber-400 mt-1">{result.gold} gold</p>}
           {result.energy && <p className="text-blue-400 mt-1">+{result.energy} energy</p>}
           {result.jackpot && <p className="text-xs text-mob-gold mt-2">🎰 JACKPOT!</p>}

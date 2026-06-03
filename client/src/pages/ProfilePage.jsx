@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGame } from '../context/GameContext';
 import { api, formatMoney } from '../api';
 
@@ -11,9 +11,11 @@ const SKILLS = [
 ];
 
 export default function ProfilePage() {
-  const { state, action } = useGame();
+  const { state, action, showMessage } = useGame();
   const [leaderboard, setLeaderboard] = useState([]);
   const [bankAmount, setBankAmount] = useState('');
+  const [copied, setCopied] = useState(false);
+  const fileRef = useRef(null);
 
   useEffect(() => {
     api('/game/leaderboard').then(setLeaderboard);
@@ -21,16 +23,72 @@ export default function ProfilePage() {
 
   if (!state) return null;
 
-  const addSkill = (stat) => action('/skill', { stat }, 'Skill point allocated!');
+  const avatars = state.defaultAvatars || catalogAvatars(state);
+  const copyCode = () => {
+    navigator.clipboard.writeText(state.referralCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    showMessage('Invite code copied!', 'success');
+  };
+
+  const pickAvatar = (avatarId) => action('/profile/avatar', { avatarId }, 'Avatar updated!');
+
+  const uploadAvatar = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 90000) {
+      showMessage('Image too large (max 90KB)', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      action('/profile/avatar', { custom: reader.result }, 'Custom avatar saved!');
+    };
+    reader.readAsDataURL(file);
+  };
 
   return (
     <div className="space-y-4">
+      <div className="card-premium text-center">
+        <img src={state.avatar_url} alt="" className="w-24 h-24 rounded-full border-2 border-mob-gold mx-auto object-cover bg-mob-bg" />
+        <h2 className="font-display text-mob-gold mt-3">{state.display_name}</h2>
+        <p className="text-xs text-gray-400">Level {state.level}</p>
+      </div>
+
+      <div className="card">
+        <h3 className="font-semibold text-sm mb-2">Invite Code</h3>
+        <div className="flex gap-2 items-center">
+          <code className="flex-1 text-center text-mob-gold font-bold tracking-widest bg-mob-bg py-2 rounded-lg">{state.referralCode}</code>
+          <button type="button" className="btn-primary text-xs" onClick={copyCode}>{copied ? 'Copied!' : 'Copy'}</button>
+        </div>
+        <p className="text-[10px] text-gray-500 mt-2 text-center">Friends enter this when registering or add it on the Mob page</p>
+      </div>
+
+      <div className="card">
+        <h3 className="font-semibold text-sm mb-3">Avatar</h3>
+        <div className="grid grid-cols-5 gap-2 mb-3">
+          {avatars.map((av) => (
+            <button
+              key={av.id}
+              type="button"
+              onClick={() => pickAvatar(av.id)}
+              className={`rounded-full p-0.5 border-2 ${state.avatar_id === av.id && !state.avatar_custom ? 'border-mob-gold' : 'border-transparent'}`}
+              title={av.name}
+            >
+              <img src={`/assets/avatars/${av.id}.svg`} alt={av.name} className="w-12 h-12 rounded-full" />
+            </button>
+          ))}
+        </div>
+        <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={uploadAvatar} />
+        <button type="button" className="btn-secondary w-full text-sm" onClick={() => fileRef.current?.click()}>Upload Custom Photo</button>
+      </div>
+
       {state.skill_points > 0 && (
         <div className="card border-mob-gold/30">
-          <h3 className="font-semibold text-mob-gold mb-2">Allocate Skill Points ({state.skill_points})</h3>
+          <h3 className="font-semibold text-mob-gold mb-2">Skill Points ({state.skill_points})</h3>
           <div className="grid grid-cols-2 gap-2">
             {SKILLS.map((s) => (
-              <button key={s.stat} className="btn-secondary text-xs" onClick={() => addSkill(s.stat)}>
+              <button key={s.stat} type="button" className="btn-secondary text-xs" onClick={() => action('/skill', { stat: s.stat }, 'Skill point allocated!')}>
                 {s.icon} +1 {s.label}
               </button>
             ))}
@@ -43,8 +101,8 @@ export default function ProfilePage() {
         <p className="text-sm text-gray-400 mb-2">Cash: {formatMoney(state.money)} · Bank: {formatMoney(state.bank_balance)}</p>
         <input type="number" className="w-full px-3 py-2 rounded-lg bg-mob-bg border border-mob-border mb-2 text-sm" placeholder="Amount" value={bankAmount} onChange={(e) => setBankAmount(e.target.value)} />
         <div className="grid grid-cols-2 gap-2">
-          <button className="btn-primary text-xs" onClick={() => action('/bank/deposit', { amount: Number(bankAmount) }, 'Deposited!')}>Deposit</button>
-          <button className="btn-secondary text-xs" onClick={() => action('/bank/withdraw', { amount: Number(bankAmount) }, 'Withdrawn!')}>Withdraw</button>
+          <button type="button" className="btn-primary text-xs" onClick={() => action('/bank/deposit', { amount: Number(bankAmount) }, 'Deposited!')}>Deposit</button>
+          <button type="button" className="btn-secondary text-xs" onClick={() => action('/bank/withdraw', { amount: Number(bankAmount) }, 'Withdrawn!')}>Withdraw</button>
         </div>
       </div>
 
@@ -59,11 +117,13 @@ export default function ProfilePage() {
           ))}
         </div>
       </div>
-
-      <div className="card text-xs text-gray-500 text-center">
-        True Mobsters v1.0 · VisionIt Studio<br />
-        Server-authoritative · All actions validated server-side
-      </div>
     </div>
   );
+}
+
+function catalogAvatars(state) {
+  return Array.from({ length: 15 }, (_, i) => ({
+    id: `default_${String(i + 1).padStart(2, '0')}`,
+    name: `Avatar ${i + 1}`,
+  }));
 }

@@ -1,6 +1,16 @@
 import { formatMoney } from '../api';
 import ItemImage from './ItemImage';
 
+function formatCountdown(isoOrMs) {
+  if (!isoOrMs) return null;
+  const t = typeof isoOrMs === 'number' ? isoOrMs : new Date(isoOrMs).getTime();
+  const sec = Math.max(0, Math.ceil((t - Date.now()) / 1000));
+  if (sec <= 0) return 'now';
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
 
 
 export function StatBar({ label, current, max, type = 'energy', icon }) {
@@ -59,13 +69,19 @@ export function PlayerHeader({ state }) {
 
     <div className="card-premium mb-5 animate-fade-up">
 
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-4 gap-3">
 
-        <div>
+        <div className="flex items-center gap-3 min-w-0">
 
-          <h1 className="font-display text-2xl text-mob-gold tracking-wide">{state.display_name}</h1>
+          <img src={state.avatar_url || '/assets/avatars/default_01.svg'} alt="" className="w-12 h-12 rounded-full border border-mob-gold/50 object-cover bg-mob-bg flex-shrink-0" />
 
-          <p className="text-sm text-gray-400 mt-0.5">Level {state.level} · {state.respect.toLocaleString()} Respect</p>
+          <div className="min-w-0">
+
+            <h1 className="font-display text-xl text-mob-gold tracking-wide truncate">{state.display_name}</h1>
+
+            <p className="text-sm text-gray-400 mt-0.5">Level {state.level} · {state.respect.toLocaleString()} Respect</p>
+
+          </div>
 
         </div>
 
@@ -99,6 +115,8 @@ export function PlayerHeader({ state }) {
 
         <span className="px-2 py-1 rounded-lg bg-mob-bg/50">🛡 DEF {state.combat?.defense || 0}</span>
 
+        <span className="px-2 py-1 rounded-lg bg-mob-bg/50">👥 Mob {state.usable_mob_in_fight || state.effective_mob_size || state.mob_size}</span>
+
         <span className="px-2 py-1 rounded-lg bg-mob-bg/50">🏆 {state.wins}W / {state.losses}L</span>
 
         {state.skill_points > 0 && (
@@ -108,6 +126,12 @@ export function PlayerHeader({ state }) {
         )}
 
       </div>
+
+      {state.regenAt && (
+        <p className="text-[10px] text-gray-500 mt-2 text-center">
+          Regen: ⚡ {formatCountdown(state.regenAt.energy) || 'full'} · 💪 {formatCountdown(state.regenAt.stamina) || 'full'} · ❤️ {formatCountdown(state.regenAt.health) || 'full'}
+        </p>
+      )}
 
       {state.in_jail_until && new Date(state.in_jail_until) > new Date() && (
 
@@ -137,9 +161,11 @@ export function PlayerHeader({ state }) {
 
 
 
-export function ItemCard({ item, owned, equipped, onBuy, onEquip, playerLevel, playerMoney }) {
+export function ItemCard({ item, owned, ownedQty = 0, equipped, onBuy, onEquip, playerLevel, playerMoney, useGold = false, stackable = false }) {
 
-  const canBuy = playerLevel >= item.minLevel && playerMoney >= item.price && !owned;
+  const canAfford = useGold && item.goldPrice ? playerMoney >= item.goldPrice : playerMoney >= item.price;
+
+  const canBuy = playerLevel >= item.minLevel && canAfford && (stackable || !owned);
 
   const statLabel = item.attack ? `+${item.attack} ATK` : item.defense ? `+${item.defense} DEF` : item.income ? `$${item.income}/hr` : '';
 
@@ -154,6 +180,8 @@ export function ItemCard({ item, owned, equipped, onBuy, onEquip, playerLevel, p
 
         {equipped && <span className="absolute -top-1 -right-1 bg-mob-gold text-black text-[10px] font-bold px-2 py-0.5 rounded-full">ON</span>}
 
+        {ownedQty > 0 && stackable && <span className="absolute -top-1 -left-1 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">×{ownedQty}</span>}
+
         {item.tier > 1 && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] text-mob-gold">{'★'.repeat(Math.min(item.tier, 5))}</span>}
 
       </div>
@@ -162,13 +190,13 @@ export function ItemCard({ item, owned, equipped, onBuy, onEquip, playerLevel, p
 
       <p className="text-xs text-mob-gold mt-1 font-medium">{statLabel}</p>
 
-      <p className="text-xs text-gray-500 mt-1">Lv.{item.minLevel}+ · {formatMoney(item.price)}</p>
+      <p className="text-xs text-gray-500 mt-1">Lv.{item.minLevel}+ · {useGold && item.goldPrice ? `${item.goldPrice} gold` : formatMoney(item.price)}</p>
 
-      {owned ? (
+      {owned && !stackable ? (
 
         item.category !== 'property' && onEquip && (
 
-          <button className="btn-secondary mt-3 text-xs w-full" onClick={() => onEquip(item)} disabled={equipped}>
+          <button type="button" className="btn-secondary mt-3 text-xs w-full" onClick={() => onEquip(item)} disabled={equipped}>
 
             {equipped ? 'Equipped' : 'Equip'}
 
@@ -178,17 +206,11 @@ export function ItemCard({ item, owned, equipped, onBuy, onEquip, playerLevel, p
 
       ) : (
 
-        <button className="btn-primary mt-3 text-xs w-full" onClick={() => onBuy(item)} disabled={!canBuy}>
+        <button type="button" className="btn-primary mt-3 text-xs w-full" onClick={() => onBuy(item)} disabled={!canBuy}>
 
-          Buy
+          {stackable && ownedQty > 0 ? 'Buy More' : 'Buy'}
 
         </button>
-
-      )}
-
-      {owned && item.category === 'property' && (
-
-        <span className="text-xs text-green-400 mt-2 font-medium">Owned</span>
 
       )}
 

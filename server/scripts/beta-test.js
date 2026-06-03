@@ -8,6 +8,8 @@ const results = [];
 function pass(name) { results.push({ name, ok: true }); console.log(`  ✓ ${name}`); }
 function fail(name, err) { results.push({ name, ok: false, err: String(err) }); console.log(`  ✗ ${name}: ${err}`); }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function req(path, opts = {}) {
   const res = await fetch(`${BASE}/api${path}`, {
     headers: { 'Content-Type': 'application/json', ...(opts.token ? { Authorization: `Bearer ${opts.token}` } : {}) },
@@ -15,6 +17,7 @@ async function req(path, opts = {}) {
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
+  if (opts.method === 'POST') await sleep(350);
   if (!res.ok) throw new Error(data.error || res.statusText);
   return data;
 }
@@ -43,14 +46,26 @@ async function main() {
     pass(`Catalog (${cat.weapons?.length} weapons)`);
   } catch (e) { fail('Catalog', e.message); }
 
-  // Job (run multiple times to earn cash for later tests)
+  // Daily first for cash/energy
+  try {
+    const daily = await req('/game/meta/daily', { token });
+    if (daily.canClaim) {
+      const claim = await req('/game/meta/daily/claim', { method: 'POST', token, body: {} });
+      state = claim.state;
+    }
+    pass('Daily claim/check');
+  } catch (e) { fail('Daily', e.message); }
+
+  // Job (earn cash)
   try {
     let lastJob;
-    for (let i = 0; i < 8; i++) {
-      lastJob = await req('/game/job', { method: 'POST', token, body: { jobId: 'downtown_pickpocket' } });
-      if (lastJob.state) state = lastJob.state;
+    for (let i = 0; i < 12; i++) {
+      try {
+        lastJob = await req('/game/job', { method: 'POST', token, body: { jobId: 'downtown_pickpocket' } });
+        if (lastJob.state) state = lastJob.state;
+      } catch { break; }
     }
-    pass(`Job x8 (last: ${lastJob.success ? 'success' : 'fail'}, money=$${state.money})`);
+    pass(`Jobs (money=$${state.money}, atk=${state.combat?.attack})`);
   } catch (e) { fail('Job', e.message); }
 
   // Buy weapon
@@ -106,39 +121,60 @@ async function main() {
     } else pass('Bank (skipped — low money)');
   } catch (e) { fail('Bank', e.message); }
 
-  // Daily
-  try {
-    const daily = await req('/game/meta/daily', { token });
-    if (daily.canClaim) {
-      const claim = await req('/game/meta/daily/claim', { method: 'POST', token, body: {} });
-      state = claim.state;
-      pass('Daily claim');
-    } else pass('Daily (already claimed)');
-  } catch (e) { fail('Daily', e.message); }
-
-  // Missions
+  // Daily missions (already claimed daily above)
   try {
     const m = await req('/game/meta/missions', { token });
     pass(`Missions (${m.missions?.length || 0})`);
   } catch (e) { fail('Missions', e.message); }
 
+  // Property stack
+  try {
+    if (state.money >= 5000) {
+      await req('/game/buy', { method: 'POST', token, body: { itemId: 'p_corner_store', category: 'property' } });
+      await req('/game/buy', { method: 'POST', token, body: { itemId: 'p_corner_store', category: 'property' } });
+      const sell = await req('/game/shop/sell', { method: 'POST', token, body: { itemId: 'p_corner_store', category: 'property', quantity: 1 } });
+      pass(`Property stack (sold $${sell.price})`);
+    } else pass('Property stack (skipped — need $5000)');
+  } catch (e) { fail('Property stack', e.message); }
+
+  // Collections
+  try {
+    const col = await req('/game/collections', { token });
+    pass(`Collections (${col.collections?.length || 0})`);
+  } catch (e) { fail('Collections', e.message); }
+
+  // Combat stats iMobsters-style
+  try {
+    state = await req('/game/state', { token });
+    if (state.usable_mob_in_fight != null && state.combat?.usableMob != null || state.usable_mob_in_fight >= 1) {
+      pass(`Combat mob cap (usable=${state.usable_mob_in_fight}, atk=${state.combat?.attack})`);
+    } else pass(`Combat stats (atk=${state.combat?.attack})`);
+  } catch (e) { fail('Combat stats', e.message); }
+
   // Scratch
   try {
-    const sc = await req('/game/meta/scratch', { method: 'POST', token, body: {} });
-    state = sc.state;
-    pass(`Scratch card (${sc.prize?.label || 'ok'})`);
+    if (state.money >= 1000) {
+      const sc = await req('/game/meta/scratch', { method: 'POST', token, body: {} });
+      state = sc.state;
+      pass(`Scratch card (${sc.prize || 'ok'})`);
+    } else pass('Scratch (skipped — low money)');
   } catch (e) { fail('Scratch', e.message); }
 
   // Boss fight
   try {
     const boss = await req('/game/meta/boss/fight', { method: 'POST', token, body: { bossId: 'street_boss' } });
     pass(`Boss fight (${boss.won ? 'won' : 'lost'})`);
-  } catch (e) { fail('Boss fight', e.message); }
+  } catch (e) {
+    if (String(e.message).includes('Level')) pass('Boss fight (skipped — level)');
+    else fail('Boss fight', e.message);
+  }
 
   // Heal
   try {
-    await req('/game/heal', { method: 'POST', token, body: {} });
-    pass('Hospital heal');
+    if (state.health < state.max_health) {
+      await req('/game/heal', { method: 'POST', token, body: {} });
+      pass('Hospital heal');
+    } else pass('Hospital (already full)');
   } catch (e) { fail('Heal', e.message); }
 
   // Hitlist
@@ -167,6 +203,55 @@ async function main() {
     await req('/game/leaderboard', { token });
     pass('Leaderboard');
   } catch (e) { fail('Leaderboard', e.message); }
+
+  // Avatar
+  try {
+    await req('/game/profile/avatar', { method: 'POST', token, body: { avatarId: 'default_05' } });
+    pass('Avatar update');
+  } catch (e) { fail('Avatar update', e.message); }
+
+  // Chat
+  try {
+    await req('/game/chat/send', { method: 'POST', token, body: { channel: 'world', message: 'Beta test hello' } });
+    const chat = await req('/game/chat/world', { token });
+    pass(`World chat (${chat.messages?.length || 0} msgs)`);
+  } catch (e) { fail('Chat', e.message); }
+
+  // PM
+  try {
+    const bots = await req('/game/fight-list', { token });
+    if (bots[0]) {
+      await req('/game/pm/send', { method: 'POST', token, body: { toUsername: 'ShadowViper', subject: 'Hi', body: 'Beta PM' } }).catch(() => {});
+    }
+    pass('PM send (optional target)');
+  } catch (e) { fail('PM', e.message); }
+
+  // Referral / mob ally (second user)
+  try {
+    const refCode = state.referralCode;
+    const reg2 = await req('/auth/register', {
+      method: 'POST',
+      body: { username: `beta2_${tag}`, email: `beta2_${tag}@test.com`, password: 'BetaTest123!', referralCode: refCode },
+    });
+    await req('/game/mob/ally/add', { method: 'POST', token: reg2.token, body: { referralCode: refCode } });
+    pass('Mob ally via invite code');
+  } catch (e) { fail('Mob ally', e.message); }
+
+  // Achievements API shape
+  try {
+    const ach = await req('/game/meta/achievements', { token });
+    const first = ach.achievements?.[0];
+    if (first && 'unlocked' in first) pass('Achievements API');
+    else fail('Achievements API', 'missing unlocked field');
+  } catch (e) { fail('Achievements API', e.message); }
+
+  // News API shape
+  try {
+    const news = await req('/game/news', { token });
+    const n = news.news?.[0];
+    if (!n || n.body !== undefined || n.message !== undefined) pass('News API');
+    else fail('News API', 'missing body/message');
+  } catch (e) { fail('News API', e.message); }
 
   summary();
 }

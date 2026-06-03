@@ -4,12 +4,14 @@ import {
   ACHIEVEMENTS, DAILY_LOGIN_REWARDS, DAILY_MISSIONS, SCRATCH_PRIZES, TERRITORIES,
   FIGHT_TYPES, REGEN, LEVEL_XP, HOSPITAL_COST_PER_HP, HITLIST_MIN_BOUNTY,
   HITLIST_FEE_PERCENT, HITLIST_BONUS_MULTIPLIER, CREW_BONUS_PER_MEMBER, CREW_MAX_BONUS,
-  MOB_BONUS_PER_MEMBER, MOB_MAX_BONUS, MOB_RECRUIT_COST, MOB_MAX_SIZE, ICE_COST_PER_HOUR,
+  MOB_BONUS_PER_MEMBER, MOB_MAX_BONUS,   MOB_RECRUIT_COST, MOB_MAX_SIZE, ICE_COST_PER_HOUR,
   ICE_MAX_HOURS, BAIL_COST_PER_MINUTE, SELL_BACK_RATIO, SCRATCH_CARD_COST, BANK_FEE_PERCENT,
   DAILY_GIFTS_MAX, REFERRAL_BONUS, COLLECTIONS, BOT_NAMES, BASE_STATS, STAT_GROWTH_PER_LEVEL,
-  generateReferralCode, GOLD_JOB_CHANCE,
+  generateReferralCode, GOLD_JOB_CHANCE, PROPERTY_MAX_STACK, DEFAULT_AVATARS, avatarUrl,
+  MOB_USABLE_PER_LEVEL, getMobBracket, GOLD_STORE,
 } from '../../../shared/gameData.js';
 import db, { isPostgres } from '../db/index.js';
+import { getEffectiveMobSize, getMobAllies, getUnreadPmCount } from './chatEngine.js';
 
 const nowFn = () => (isPostgres ? 'NOW()' : "datetime('now')");
 
@@ -82,16 +84,35 @@ export async function getCrewMemberCount(crewId) {
   return Number(row?.c || 0);
 }
 
+export async function getTerritoryBonusForCrew(crewId) {
+  if (!crewId) return 0;
+  const rows = await db.all('SELECT id FROM territories WHERE crew_id=?', [crewId]);
+  let bonus = 0;
+  for (const row of rows) {
+    const ter = TERRITORIES.find((t) => t.id === row.id);
+    if (ter) bonus += ter.bonus;
+  }
+  return bonus;
+}
+
 export async function getCombatStats(player, crewMemberCount = 0, inventory = []) {
   const weaponAtk = getItemBonus(player.equipped_weapon, WEAPONS, 'attack');
   const armorDef = getItemBonus(player.equipped_armor, ARMOR, 'defense');
   const vehicleDef = getItemBonus(player.equipped_vehicle, VEHICLES, 'defense');
   const crewBonus = Math.min(CREW_MAX_BONUS, crewMemberCount * CREW_BONUS_PER_MEMBER);
-  const mobBonus = Math.min(MOB_MAX_BONUS, (player.mob_size || 1) * MOB_BONUS_PER_MEMBER);
+  const effectiveMob = player.effective_mob_size ?? player.mob_size ?? 1;
+  const usableMob = Math.min(effectiveMob, (player.level || 1) * MOB_USABLE_PER_LEVEL);
   const colBonus = getCollectionBonus(inventory);
-  const attack = Math.floor((player.attack_skill + weaponAtk + colBonus.attack) * (1 + crewBonus + mobBonus));
-  const defense = Math.floor((player.defense_skill + armorDef + vehicleDef + colBonus.defense) * (1 + crewBonus));
-  return { attack, defense, crewBonus, mobBonus, collectionBonus: colBonus };
+  const territoryBonus = player.territory_bonus ?? 0;
+  // iMobsters: each mob member uses your equipment in fights
+  const mobAttack = weaponAtk * usableMob;
+  const mobDefense = (armorDef + vehicleDef) * usableMob;
+  const attack = Math.floor((player.attack_skill + mobAttack + colBonus.attack) * (1 + crewBonus + territoryBonus));
+  const defense = Math.floor((player.defense_skill + mobDefense + colBonus.defense) * (1 + crewBonus + territoryBonus));
+  return {
+    attack, defense, crewBonus, mobBonus: usableMob / Math.max(1, effectiveMob),
+    usableMob, effectiveMob, collectionBonus: colBonus, territoryBonus,
+  };
 }
 
 export async function getPlayerRow(userId) {
@@ -197,6 +218,7 @@ export async function resolveFight(attackerId, defenderId, fightType = 'fight') 
   const defender = await getPlayerRow(defenderId);
   if (!attacker || !defender) throw new Error('Player not found');
   if (attackerId === defenderId) throw new Error('Cannot fight yourself');
+  if (attacker.in_jail_until && parseTime(attacker.in_jail_until) > Date.now()) throw new Error('You are in jail');
   if (attacker.stamina < ft.stamina) throw new Error('Not enough stamina');
   if (attacker.health <= 0) throw new Error('You need hospital treatment');
   if (defender.health <= 0) throw new Error('Target is hospitalized');
@@ -226,10 +248,11 @@ export async function resolveFight(attackerId, defenderId, fightType = 'fight') 
     }
     const dmg = randomInt(ft.damage[0], ft.damage[1]);
     if (fightType === 'execute' && Math.random() < (ft.killChance || 0)) killed = 1;
+    const defHealth = killed ? 0 : Math.max(0, defender.health - dmg);
     await db.run('UPDATE players SET stamina=stamina-?, money=money+?, respect=respect+?, wins=wins+1, kills=kills+? WHERE user_id=?',
       [ft.stamina, moneyStolen, respectGained, killed, attackerId]);
-    await db.run('UPDATE players SET money=CASE WHEN money-? < 0 THEN 0 ELSE money-? END, health=CASE WHEN health-? < 0 THEN 0 ELSE health-? END, losses=losses+1 WHERE user_id=?',
-      [moneyStolen - (hitlistEntry ? bountyClaimed : 0), moneyStolen - (hitlistEntry ? bountyClaimed : 0), dmg, dmg, defenderId]);
+    await db.run('UPDATE players SET money=CASE WHEN money-? < 0 THEN 0 ELSE money-? END, health=?, losses=losses+1 WHERE user_id=?',
+      [moneyStolen - (hitlistEntry ? bountyClaimed : 0), moneyStolen - (hitlistEntry ? bountyClaimed : 0), defHealth, defenderId]);
     if (defender.is_bot) await scheduleBotRetaliation(defenderId, attackerId);
     await sendMail(defenderId, 'You were attacked!', `${attacker.display_name} ${fightType}ed you and won $${moneyStolen}.`, 'combat');
     await addNews(attackerId, 'fight_win', `${attacker.display_name} defeated ${defender.display_name}`);
@@ -237,8 +260,7 @@ export async function resolveFight(attackerId, defenderId, fightType = 'fight') 
   } else {
     const dmg = randomInt(ft.damage[0] + 5, ft.damage[1] + 10);
     await db.run('UPDATE players SET stamina=stamina-?, health=CASE WHEN health-? < 0 THEN 0 ELSE health-? END, losses=losses+1 WHERE user_id=?', [ft.stamina, dmg, dmg, attackerId]);
-    await db.run('UPDATE players SET wins=wins+1 WHERE user_id=?', [defenderId]);
-    await sendMail(defenderId, 'Defense successful', `${attacker.display_name} attacked you but you won!`, 'combat');
+    await sendMail(defenderId, 'Defense successful', `${attacker.display_name} attacked you but failed!`, 'combat');
   }
 
   await addXp(attacker, attackerWon ? ft.xpWin : ft.xpLose);
@@ -277,7 +299,12 @@ export async function buyItem(userId, itemId, category, useGold = false) {
   if (useGold) { if ((player.gold || 0) < price) throw new Error('Not enough gold'); }
   else { if (player.money < price) throw new Error('Not enough money'); }
   if (category === 'property') {
-    const owned = await db.get('SELECT 1 FROM inventory WHERE user_id=? AND item_id=?', [userId, itemId]);
+    const owned = await db.get('SELECT quantity FROM inventory WHERE user_id=? AND item_id=? AND category=?', [userId, itemId, 'property']);
+    const qty = Number(owned?.quantity || 0);
+    if (qty >= PROPERTY_MAX_STACK) throw new Error(`Max ${PROPERTY_MAX_STACK} of this property`);
+  }
+  if (category !== 'consumable' && category !== 'property') {
+    const owned = await db.get('SELECT 1 FROM inventory WHERE user_id=? AND item_id=? AND category=?', [userId, itemId, category]);
     if (owned) throw new Error('Already owned');
   }
   if (useGold) await db.run('UPDATE players SET gold=gold-? WHERE user_id=?', [price, userId]);
@@ -293,19 +320,26 @@ export async function buyItem(userId, itemId, category, useGold = false) {
   return item;
 }
 
-export async function sellItem(userId, itemId, category) {
+export async function sellItem(userId, itemId, category, quantity = 1) {
+  if (!Number.isInteger(quantity) || quantity < 1) throw new Error('Invalid quantity');
   const lists = { weapon: WEAPONS, armor: ARMOR, vehicle: VEHICLES, property: PROPERTIES, consumable: CONSUMABLES };
   const item = lists[category]?.find((i) => i.id === itemId);
   if (!item) throw new Error('Invalid item');
   const owned = await db.get('SELECT * FROM inventory WHERE user_id=? AND item_id=? AND category=?', [userId, itemId, category]);
   if (!owned) throw new Error('Item not owned');
-  const sellPrice = Math.floor((item.price || 1000) * SELL_BACK_RATIO);
-  await db.run('DELETE FROM inventory WHERE user_id=? AND item_id=?', [userId, itemId]);
-  const player = await getPlayerRow(userId);
-  const cols = { weapon: 'equipped_weapon', armor: 'equipped_armor', vehicle: 'equipped_vehicle' };
-  if (cols[category] && player[cols[category]] === itemId) await db.run(`UPDATE players SET ${cols[category]}=NULL WHERE user_id=?`, [userId]);
+  const ownedQty = Number(owned.quantity || 1);
+  if (quantity > ownedQty) throw new Error('Not enough to sell');
+  const sellPrice = Math.floor((item.price || 1000) * SELL_BACK_RATIO) * quantity;
+  if (ownedQty <= quantity) {
+    await db.run('DELETE FROM inventory WHERE user_id=? AND item_id=? AND category=?', [userId, itemId, category]);
+    const player = await getPlayerRow(userId);
+    const cols = { weapon: 'equipped_weapon', armor: 'equipped_armor', vehicle: 'equipped_vehicle' };
+    if (cols[category] && player[cols[category]] === itemId) await db.run(`UPDATE players SET ${cols[category]}=NULL WHERE user_id=?`, [userId]);
+  } else {
+    await db.run('UPDATE inventory SET quantity=quantity-? WHERE user_id=? AND item_id=? AND category=?', [quantity, userId, itemId, category]);
+  }
   await db.run('UPDATE players SET money=money+? WHERE user_id=?', [sellPrice, userId]);
-  return { sold: item, price: sellPrice };
+  return { sold: item, price: sellPrice, quantity };
 }
 
 export async function useConsumable(userId, itemId) {
@@ -382,12 +416,13 @@ export async function collectPropertyIncome(userId) {
   let totalIncome = 0;
   for (const row of owned) {
     const prop = PROPERTIES.find((p) => p.id === row.item_id);
-    if (prop) totalIncome += prop.income;
+    if (prop) totalIncome += prop.income * Number(row.quantity || 1);
   }
   if (totalIncome <= 0) return { collected: 0 };
   const hoursSince = (Date.now() - parseTime(player.last_income_collect)) / 3600000;
   if (hoursSince < 1) throw new Error('Income available once per hour');
-  const collected = Math.floor(totalIncome * Math.min(hoursSince, 24));
+  const territoryBonus = await getTerritoryBonusForCrew(player.crew_id);
+  const collected = Math.floor(totalIncome * Math.min(hoursSince, 24) * (1 + territoryBonus));
   await db.run('UPDATE players SET money=money+?, last_income_collect=? WHERE user_id=?', [collected, nowISO(), userId]);
   return { collected, hours: Math.floor(hoursSince) };
 }
@@ -500,7 +535,7 @@ export async function checkAchievements(userId) {
   const refCount = await db.get('SELECT COUNT(*) as c FROM referrals WHERE referrer_id=?', [userId]);
   const ctx = {
     ...player,
-    propertyCount: inventory.filter((i) => i.category === 'property').length,
+    propertyCount: inventory.filter((i) => i.category === 'property').reduce((s, i) => s + Number(i.quantity || 1), 0),
     referralCount: Number(refCount?.c || 0),
     bossKills: player.boss_kills,
     scratchJackpot: !!player.scratch_jackpot,
@@ -665,7 +700,55 @@ export async function readAllMail(userId) {
 }
 
 export async function getNews(limit = 30) {
-  return db.all('SELECT * FROM news_feed ORDER BY created_at DESC LIMIT ?', [limit]);
+  const rows = await db.all('SELECT * FROM news_feed ORDER BY created_at DESC LIMIT ?', [limit]);
+  return rows.map((n) => ({
+    ...n,
+    title: n.title || n.event_type?.replace(/_/g, ' ') || 'News',
+    body: n.body || n.message || '',
+  }));
+}
+
+export async function buyGoldStoreItem(userId, packId) {
+  const pack = GOLD_STORE.find((p) => p.id === packId);
+  if (!pack) throw new Error('Invalid pack');
+  const player = await getPlayerRow(userId);
+  if (player.respect < pack.respectCost) throw new Error('Not enough respect');
+  await db.run('UPDATE players SET respect=respect-? WHERE user_id=?', [pack.respectCost, userId]);
+  if (pack.effect === 'energy') {
+    await db.run('UPDATE players SET energy=max_energy WHERE user_id=?', [userId]);
+    return { pack, effect: 'energy' };
+  }
+  if (pack.effect === 'stamina') {
+    await db.run('UPDATE players SET stamina=max_stamina WHERE user_id=?', [userId]);
+    return { pack, effect: 'stamina' };
+  }
+  await db.run('UPDATE players SET gold=gold+? WHERE user_id=?', [pack.gold, userId]);
+  return { pack, gold: pack.gold };
+}
+
+export function getCollectionProgress(inventory) {
+  const owned = new Set((inventory || []).map((i) => i.item_id));
+  return COLLECTIONS.map((col) => ({
+    ...col,
+    owned: col.items.filter((id) => owned.has(id)).length,
+    total: col.items.length,
+    complete: col.items.every((id) => owned.has(id)),
+  }));
+}
+
+export async function updateAvatar(userId, avatarId) {
+  const av = DEFAULT_AVATARS.find((a) => a.id === avatarId);
+  if (!av) throw new Error('Invalid avatar');
+  await db.run('UPDATE players SET avatar_id=?, avatar_custom=NULL WHERE user_id=?', [avatarId, userId]);
+  return { avatar_id: avatarId, avatar_url: avatarUrl({ avatar_id: avatarId }) };
+}
+
+export async function updateCustomAvatar(userId, dataUrl) {
+  if (!dataUrl || typeof dataUrl !== 'string') throw new Error('Invalid image');
+  if (!dataUrl.startsWith('data:image/')) throw new Error('Image must be PNG or JPEG');
+  if (dataUrl.length > 120000) throw new Error('Image too large (max ~90KB)');
+  await db.run('UPDATE players SET avatar_custom=?, avatar_id=? WHERE user_id=?', [dataUrl, 'custom', userId]);
+  return { avatar_url: dataUrl };
 }
 
 export async function getRevengeList(userId) {
@@ -749,26 +832,75 @@ export async function buildPlayerState(userId) {
   const player = await getPlayerRow(userId);
   if (!player) return null;
   const inventory = await db.all('SELECT * FROM inventory WHERE user_id=?', [userId]);
+  const mobAllies = await getMobAllies(userId);
+  const effectiveMobSize = await getEffectiveMobSize(userId, player.mob_size);
+  player.effective_mob_size = effectiveMobSize;
+  player.territory_bonus = await getTerritoryBonusForCrew(player.crew_id);
   const crew = player.crew_id ? await db.get('SELECT * FROM crews WHERE id=?', [player.crew_id]) : null;
+  if (crew) crew.treasury = crew.bank_balance;
   const crewMembers = player.crew_id
-    ? await db.all('SELECT p.display_name, p.level, p.respect, p.user_id, p.crew_role FROM players p WHERE p.crew_id=? ORDER BY p.respect DESC LIMIT 50', [player.crew_id])
+    ? await db.all('SELECT p.display_name, p.level, p.respect, p.user_id, p.crew_role, p.crew_role as role FROM players p WHERE p.crew_id=? ORDER BY p.respect DESC LIMIT 50', [player.crew_id])
     : [];
   const combat = await getCombatStats(player, await getCrewMemberCount(player.crew_id), inventory);
   const unreadMail = await db.get('SELECT COUNT(*) as c FROM mail WHERE user_id=? AND read_status=0', [userId]);
+  const unreadPm = await getUnreadPmCount(userId);
   const missions = await getDailyMissions(userId);
   const canClaimDaily = !player.last_daily_claim || dateStr(player.last_daily_claim) !== todayStr();
+  const now = Date.now();
+  const incomeHours = (now - parseTime(player.last_income_collect)) / 3600000;
+  const mobBracket = getMobBracket(effectiveMobSize);
+  const nextRegen = (field, max, last, sec) => {
+    if (player[field] >= player[max]) return null;
+    return parseTime(last) + sec * 1000;
+  };
   return {
-    ...player, is_bot: !!player.is_bot, inventory, crew, crewMembers, combat,
+    ...player, is_bot: !!player.is_bot, inventory, crew, crewMembers, combat, mobAllies,
+    effective_mob_size: effectiveMobSize,
+    usable_mob_in_fight: Math.min(effectiveMobSize, (player.level || 1) * MOB_USABLE_PER_LEVEL),
+    mob_bracket: mobBracket,
+    collections: getCollectionProgress(inventory),
     xpNeeded: LEVEL_XP(player.level), regen: REGEN,
-    unreadMail: Number(unreadMail?.c || 0), dailyMissions: missions, canClaimDaily,
+    regenAt: {
+      energy: nextRegen('energy', 'max_energy', 'last_energy_regen', REGEN.energySeconds),
+      stamina: nextRegen('stamina', 'max_stamina', 'last_stamina_regen', REGEN.staminaSeconds),
+      health: nextRegen('health', 'max_health', 'last_health_regen', REGEN.healthSeconds),
+    },
+    incomeReady: incomeHours >= 1,
+    incomeHoursAccrued: Math.floor(Math.min(incomeHours, 24)),
+    unreadMail: Number(unreadMail?.c || 0), unreadPm,
+    dailyMissions: missions, canClaimDaily,
     iced: player.iced_until && parseTime(player.iced_until) > Date.now(),
     referralCode: player.referral_code,
+    avatar_url: avatarUrl(player),
+    defaultAvatars: DEFAULT_AVATARS,
+    goldStore: GOLD_STORE,
   };
 }
 
 export async function getFightList(userId, limit = 30) {
-  return db.all(`SELECT p.user_id, p.display_name, p.level, p.respect, u.is_bot, p.wins, p.losses, p.health, p.max_health, p.iced_until, p.mob_size
-    FROM players p JOIN users u ON u.id=p.user_id WHERE p.user_id!=? AND p.health>0 ORDER BY p.level DESC, p.respect DESC LIMIT ?`, [userId, limit]);
+  const player = await getPlayerRow(userId);
+  if (!player) return [];
+  const effectiveMob = await getEffectiveMobSize(userId, player.mob_size);
+  const bracket = getMobBracket(effectiveMob);
+  const minLevel = Math.max(1, player.level - 15);
+  const maxLevel = player.level + 15;
+  const rows = await db.all(
+    `SELECT p.user_id, p.display_name, p.level, p.respect, u.is_bot, p.wins, p.losses, p.health, p.max_health,
+      p.iced_until, p.in_jail_until, p.mob_size,
+      (p.mob_size + COALESCE((SELECT COUNT(*) FROM mob_allies ma WHERE ma.user_id=p.user_id), 0)) AS effective_mob
+     FROM players p JOIN users u ON u.id=p.user_id
+     WHERE p.user_id!=? AND p.health>0 AND p.level BETWEEN ? AND ?
+     ORDER BY ABS(p.level - ?), p.respect DESC LIMIT ?`,
+    [userId, minLevel, maxLevel, player.level, limit * 3],
+  );
+  const now = Date.now();
+  return rows.filter((r) => {
+    const em = Number(r.effective_mob || r.mob_size || 1);
+    if (em < bracket.min || em > bracket.max) return false;
+    if (r.iced_until && parseTime(r.iced_until) > now) return false;
+    if (r.in_jail_until && parseTime(r.in_jail_until) > now) return false;
+    return true;
+  }).slice(0, limit);
 }
 
 export async function getHitlist() {

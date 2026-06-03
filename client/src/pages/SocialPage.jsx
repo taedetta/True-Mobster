@@ -35,6 +35,10 @@ export default function SocialPage() {
     loadFriends();
   };
 
+  const claimAllGifts = async () => {
+    await action('/social/gift/claim', {}, 'Gifts claimed!');
+    loadGifts();
+  };
   const sendGift = async () => {
     await action('/social/gift/send', giftForm, 'Gift sent!');
     loadGifts();
@@ -91,7 +95,12 @@ export default function SocialPage() {
             <input type="number" className="w-full px-3 py-2 rounded-lg bg-mob-bg border border-mob-border mb-2 text-sm" value={giftForm.amount} onChange={(e) => setGiftForm({ ...giftForm, amount: Number(e.target.value) })} />
             <button className="btn-primary w-full text-sm" onClick={sendGift} disabled={!giftForm.friendId}>Send Gift</button>
           </div>
-          <h3 className="font-semibold text-sm">Received Gifts</h3>
+          <h3 className="font-semibold text-sm flex justify-between items-center">
+            Received Gifts
+            {gifts.length > 0 && (
+              <button type="button" className="btn-primary text-xs" onClick={claimAllGifts}>Claim All</button>
+            )}
+          </h3>
           <div className="space-y-2">
             {gifts.map((g) => (
               <div key={g.id} className="card text-sm">

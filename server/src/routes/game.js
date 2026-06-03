@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
+import db from '../db/index.js';
 import {
   buildPlayerState, doJob, resolveFight, buyItem, equipItem, sellItem, useConsumable,
   collectPropertyIncome, healAtHospital, bankDeposit, bankWithdraw,
@@ -10,11 +11,17 @@ import {
   addFriend, removeFriend, getFriends, sendGift, getGifts, claimGifts,
   getMail, readMail, readAllMail, getNews, getRevengeList, getPlayerProfile,
   getTerritories, declareTerritoryWar, donateToCrew, kickCrewMember, transferLeadership,
+  updateAvatar, updateCustomAvatar, buyGoldStoreItem, getCollectionProgress,
 } from '../services/gameEngine.js';
+import {
+  sendChatMessage, getChatMessages, sendPrivateMessage, getPrivateMessages,
+  readPrivateMessage, addMobAlly, removeMobAlly, getMobAllies,
+} from '../services/chatEngine.js';
 import {
   JOBS, LOCATIONS, WEAPONS, ARMOR, VEHICLES, PROPERTIES, CONSUMABLES, BOSSES,
   ACHIEVEMENTS, DAILY_MISSIONS, DAILY_LOGIN_REWARDS, TERRITORIES, FIGHT_TYPES,
-  itemThumbnailPath, GAME_NAME, STUDIO, MOB_RECRUIT_COST, MOB_MAX_SIZE,
+  itemThumbnailPath, GAME_NAME, STUDIO, MOB_RECRUIT_COST, MOB_MAX_SIZE, DEFAULT_AVATARS,
+  COLLECTIONS, GOLD_STORE, MOB_USABLE_PER_LEVEL, getMobBracket,
 } from '../../../shared/gameData.js';
 
 const router = Router();
@@ -41,6 +48,10 @@ router.get('/catalog', wrap(async () => {
     territories: TERRITORIES.map((t) => ({ ...t, thumbnail: itemThumbnailPath('territory', t.id) })),
     fightTypes: FIGHT_TYPES, achievements: ACHIEVEMENTS,
     dailyMissions: DAILY_MISSIONS, dailyLoginRewards: DAILY_LOGIN_REWARDS,
+    defaultAvatars: DEFAULT_AVATARS,
+    collections: COLLECTIONS,
+    goldStore: GOLD_STORE,
+    mobUsablePerLevel: MOB_USABLE_PER_LEVEL,
   };
 }));
 
@@ -67,7 +78,7 @@ router.post('/buy', wrap(async (req) => {
 }));
 
 router.post('/shop/sell', wrap(async (req) => {
-  const result = await sellItem(req.userId, req.body.itemId, req.body.category);
+  const result = await sellItem(req.userId, req.body.itemId, req.body.category, req.body.quantity || 1);
   return { ...result, state: await buildPlayerState(req.userId) };
 }));
 
@@ -121,16 +132,76 @@ router.get('/mob/info', wrap(async (req) => {
   const p = await buildPlayerState(req.userId);
   return {
     mob_size: p.mob_size,
+    effective_mob_size: p.effective_mob_size,
+    allies: p.mobAllies?.length || 0,
     max_mob: MOB_MAX_SIZE,
     bonus: p.combat?.mobBonus,
     nextCost: MOB_RECRUIT_COST(p.mob_size),
     recruitCost: MOB_RECRUIT_COST(p.mob_size),
     dailyRecruited: p.daily_mob_recruited,
+    referralCode: p.referralCode,
   };
 }));
 
 router.post('/mob/recruit', wrap(async (req) => {
   const result = await recruitMob(req.userId, req.body.amount || 1);
+  return { ...result, state: await buildPlayerState(req.userId) };
+}));
+
+router.get('/mob/allies', wrap(async (req) => ({ allies: await getMobAllies(req.userId) })));
+
+router.post('/mob/ally/add', wrap(async (req) => {
+  const result = await addMobAlly(req.userId, req.body.referralCode);
+  return { ...result, state: await buildPlayerState(req.userId) };
+}));
+
+router.post('/mob/ally/remove', wrap(async (req) => {
+  await removeMobAlly(req.userId, req.body.allyId);
+  return { state: await buildPlayerState(req.userId) };
+}));
+
+// Chat
+router.get('/chat/:channel', wrap(async (req) => {
+  const state = await buildPlayerState(req.userId);
+  const messages = await getChatMessages(req.params.channel, state?.crew?.id, Number(req.query.limit) || 50);
+  return { messages: messages.reverse() };
+}));
+
+router.post('/chat/send', wrap(async (req) => {
+  const msg = await sendChatMessage(req.userId, req.body.channel || 'world', req.body.message);
+  return { message: msg };
+}));
+
+router.get('/pm', wrap(async (req) => ({
+  inbox: await getPrivateMessages(req.userId, 'inbox'),
+  sent: await getPrivateMessages(req.userId, 'sent'),
+})));
+
+router.post('/pm/send', wrap(async (req) => {
+  const result = await sendPrivateMessage(req.userId, req.body.toUsername, req.body.subject, req.body.body);
+  return { ...result, state: await buildPlayerState(req.userId) };
+}));
+
+router.post('/pm/read', wrap(async (req) => {
+  await readPrivateMessage(req.userId, req.body.messageId);
+  return { ok: true };
+}));
+
+// Profile / avatar
+router.post('/profile/avatar', wrap(async (req) => {
+  const result = req.body.custom
+    ? await updateCustomAvatar(req.userId, req.body.custom)
+    : await updateAvatar(req.userId, req.body.avatarId);
+  return { ...result, state: await buildPlayerState(req.userId) };
+}));
+
+router.get('/collections', wrap(async (req) => {
+  const inventory = await db.all('SELECT * FROM inventory WHERE user_id=?', [req.userId]);
+  return { collections: getCollectionProgress(inventory) };
+}));
+
+router.post('/gold/buy', wrap(async (req) => {
+  const result = await buyGoldStoreItem(req.userId, req.body.packId);
   return { ...result, state: await buildPlayerState(req.userId) };
 }));
 
@@ -176,7 +247,7 @@ router.post('/meta/mission/claim', wrap(async (req) => {
   return { ...result, state: await buildPlayerState(req.userId) };
 }));
 
-router.get('/meta/achievements', wrap(async (req) => getAchievements(req.userId)));
+router.get('/meta/achievements', wrap(async (req) => ({ achievements: await getAchievements(req.userId) })));
 
 router.post('/meta/achievement/claim', wrap(async (req) => {
   const result = await claimAchievement(req.userId, req.body.achievementId);
@@ -224,7 +295,7 @@ router.post('/social/gift/claim', wrap(async (req) => {
 router.get('/mail', wrap(async (req) => getMail(req.userId)));
 router.post('/mail/read', wrap(async (req) => { await readMail(req.userId, req.body.mailId); return { ok: true }; }));
 router.post('/mail/read-all', wrap(async (req) => { await readAllMail(req.userId); return { ok: true }; }));
-router.get('/news', wrap(async () => getNews()));
+router.get('/news', wrap(async () => ({ news: await getNews() })));
 
 // Crews
 router.get('/crews', wrap(async () => listCrews()));

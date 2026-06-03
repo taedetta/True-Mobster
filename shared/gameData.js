@@ -20,6 +20,10 @@ export const MOB_BONUS_PER_MEMBER = 0.015;
 export const MOB_MAX_BONUS = 0.45;
 export const MOB_RECRUIT_COST = (size) => Math.floor(500 * Math.pow(1.35, size));
 export const MOB_MAX_SIZE = 500;
+/** iMobsters: max mob usable in fight = 5 × level */
+export const MOB_USABLE_PER_LEVEL = 5;
+/** Each mob ally code adds +1 to mob size (not their full mob) */
+export const MOB_ALLY_CONTRIBUTION = 1;
 export const ICE_COST_PER_HOUR = 5000;
 export const ICE_MAX_HOURS = 24;
 export const BAIL_COST_PER_MINUTE = 50;
@@ -230,9 +234,52 @@ export function itemThumbnailPath(category, id) {
   return `/assets/items/${category}_${id}.webp`;
 }
 
+export const PROPERTY_MAX_STACK = 999;
+
+export const DEFAULT_AVATARS = [
+  { id: 'default_01', name: 'Don', emoji: '🎩', color: '#fbbf24' },
+  { id: 'default_02', name: 'Enforcer', emoji: '🕴️', color: '#1f2937' },
+  { id: 'default_03', name: 'Gunman', emoji: '🔫', color: '#374151' },
+  { id: 'default_04', name: 'Boss', emoji: '👹', color: '#dc2626' },
+  { id: 'default_05', name: 'Queen', emoji: '👑', color: '#a855f7' },
+  { id: 'default_06', name: 'Shadow', emoji: '🥷', color: '#0f172a' },
+  { id: 'default_07', name: 'Hustler', emoji: '💰', color: '#22c55e' },
+  { id: 'default_08', name: 'Driver', emoji: '🚗', color: '#6366f1' },
+  { id: 'default_09', name: 'Snake', emoji: '🐍', color: '#166534' },
+  { id: 'default_10', name: 'Wolf', emoji: '🐺', color: '#78716c' },
+  { id: 'default_11', name: 'Skull', emoji: '💀', color: '#44403c' },
+  { id: 'default_12', name: 'Viper', emoji: '🦂', color: '#854d0e' },
+  { id: 'default_13', name: 'Rose', emoji: '🌹', color: '#be123c' },
+  { id: 'default_14', name: 'Ace', emoji: '🃏', color: '#1e40af' },
+  { id: 'default_15', name: 'Ghost', emoji: '👻', color: '#64748b' },
+];
+
+export function avatarUrl(player) {
+  if (player?.avatar_custom) return player.avatar_custom;
+  const id = player?.avatar_id || 'default_01';
+  return `/assets/avatars/${id}.svg`;
+}
+
 export function generateReferralCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
-  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
   return code;
 }
+
+/** iMobsters mob brackets: 1-4, 5-9, 10-14, 15-19, ... */
+export function getMobBracket(mobSize) {
+  const size = Math.max(1, mobSize || 1);
+  if (size <= 4) return { min: 1, max: 4 };
+  const bracketIndex = Math.floor((size - 5) / 5);
+  return { min: 5 + bracketIndex * 5, max: 9 + bracketIndex * 5 };
+}
+
+export const GOLD_STORE = [
+  { id: 'gold_10', name: '10 Gold', gold: 10, respectCost: 500, icon: '🪙' },
+  { id: 'gold_25', name: '25 Gold', gold: 25, respectCost: 1200, icon: '🪙' },
+  { id: 'gold_60', name: '60 Gold', gold: 60, respectCost: 2500, icon: '💰' },
+  { id: 'gold_125', name: '125 Gold', gold: 125, respectCost: 5000, icon: '💎' },
+  { id: 'energy_refill', name: 'Full Energy', gold: 8, respectCost: 400, effect: 'energy', icon: '⚡' },
+  { id: 'stamina_refill', name: 'Full Stamina', gold: 6, respectCost: 300, effect: 'stamina', icon: '💪' },
+];

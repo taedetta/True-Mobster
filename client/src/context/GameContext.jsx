@@ -111,7 +111,7 @@ export function GameProvider({ children }) {
   return (
     <GameContext.Provider value={{
       state, catalog, loading, message, refresh, action, gameGet, showMessage,
-      setState,
+      setState, socketRef,
     }}>
       {children}
     </GameContext.Provider>

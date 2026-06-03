@@ -218,9 +218,37 @@ const SCHEMA = `
     created_at TIMESTAMPTZ DEFAULT NOW()
   );
 
+  CREATE TABLE IF NOT EXISTS chat_messages (
+    id SERIAL PRIMARY KEY,
+    channel TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    message TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  CREATE TABLE IF NOT EXISTS private_messages (
+    id SERIAL PRIMARY KEY,
+    from_id TEXT NOT NULL,
+    to_id TEXT NOT NULL,
+    subject TEXT DEFAULT '',
+    body TEXT NOT NULL,
+    read_status INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  CREATE TABLE IF NOT EXISTS mob_allies (
+    user_id TEXT NOT NULL,
+    ally_id TEXT NOT NULL,
+    added_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (user_id, ally_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_chat_channel ON chat_messages(channel, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_hitlist_target ON hitlist(target_id, claimed);
   CREATE INDEX IF NOT EXISTS idx_combat_attacker ON combat_log(attacker_id);
   CREATE INDEX IF NOT EXISTS idx_combat_defender ON combat_log(defender_id);
+  CREATE INDEX IF NOT EXISTS idx_pm_to ON private_messages(to_id, read_status);
   CREATE INDEX IF NOT EXISTS idx_friends_user ON friends(user_id);
   CREATE INDEX IF NOT EXISTS idx_mail_user ON mail(user_id, read_status);
   CREATE INDEX IF NOT EXISTS idx_news_created ON news_feed(created_at DESC);
@@ -259,6 +287,13 @@ export async function initDatabase() {
       await client.query('CREATE SCHEMA IF NOT EXISTS true_mobsters');
       await client.query('SET search_path TO true_mobsters');
       await client.query(SCHEMA);
+      const pgMigrations = [
+        "ALTER TABLE players ADD COLUMN IF NOT EXISTS avatar_id TEXT DEFAULT 'default_01'",
+        'ALTER TABLE players ADD COLUMN IF NOT EXISTS avatar_custom TEXT',
+      ];
+      for (const m of pgMigrations) {
+        try { await client.query(m); } catch { /* */ }
+      }
       for (const t of ['downtown_block', 'industrial_yard', 'waterfront_docks', 'casino_strip', 'skyline_crown', 'empire_throne']) {
         await client.query('INSERT INTO territories (id) VALUES ($1) ON CONFLICT DO NOTHING', [t]);
       }
@@ -295,6 +330,8 @@ export async function initDatabase() {
     'ALTER TABLE crews ADD COLUMN level INTEGER DEFAULT 1',
     'ALTER TABLE combat_log ADD COLUMN fight_type TEXT DEFAULT \'fight\'',
     'ALTER TABLE combat_log ADD COLUMN killed INTEGER DEFAULT 0',
+    "ALTER TABLE players ADD COLUMN avatar_id TEXT DEFAULT 'default_01'",
+    'ALTER TABLE players ADD COLUMN avatar_custom TEXT',
   ];
   for (const m of migrations) {
     try { sqliteDb.exec(m); } catch { /* column exists */ }

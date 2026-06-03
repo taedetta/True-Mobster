@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 export default function LoginPage() {
   const { login, register, loading } = useAuth();
   const [mode, setMode] = useState('login');
-  const [form, setForm] = useState({ username: '', email: '', password: '', displayName: '' });
+  const [form, setForm] = useState({ username: '', email: '', password: '', displayName: '', referralCode: '' });
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
@@ -14,7 +14,7 @@ export default function LoginPage() {
       if (mode === 'login') {
         await login(form.username, form.password);
       } else {
-        await register(form.username, form.email, form.password, form.displayName || form.username);
+        await register(form.username, form.email, form.password, form.displayName || form.username, form.referralCode || undefined);
       }
     } catch (err) {
       setError(err.message);
@@ -41,6 +41,7 @@ export default function LoginPage() {
           <>
             <input className="w-full px-4 py-3 rounded-lg bg-mob-bg border border-mob-border focus:border-mob-gold outline-none" placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
             <input className="w-full px-4 py-3 rounded-lg bg-mob-bg border border-mob-border focus:border-mob-gold outline-none" placeholder="Display Name (optional)" value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} />
+            <input className="w-full px-4 py-3 rounded-lg bg-mob-bg border border-mob-border focus:border-mob-gold outline-none font-mono uppercase" placeholder="Friend's Invite Code (optional)" value={form.referralCode} onChange={(e) => setForm({ ...form, referralCode: e.target.value.toUpperCase() })} />
           </>
         )}
         <input className="w-full px-4 py-3 rounded-lg bg-mob-bg border border-mob-border focus:border-mob-gold outline-none" placeholder="Password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />

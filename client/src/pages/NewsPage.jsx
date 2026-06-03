@@ -18,12 +18,12 @@ export default function NewsPage() {
         {news.map((n) => (
           <div key={n.id} className="card">
             <div className="flex justify-between items-start">
-              <h3 className="font-semibold text-sm">{n.title}</h3>
+              <h3 className="font-semibold text-sm">{n.title || n.event_type?.replace(/_/g, ' ') || 'News'}</h3>
               <span className="text-xs text-gray-500 whitespace-nowrap ml-2">
                 {n.created_at && new Date(n.created_at).toLocaleDateString()}
               </span>
             </div>
-            <p className="text-sm text-gray-300 mt-2">{n.body || n.content}</p>
+            <p className="text-sm text-gray-300 mt-2">{n.body || n.content || n.message}</p>
             {n.author && <p className="text-xs text-gray-500 mt-2">— {n.author}</p>}
           </div>
         ))}

@@ -20,6 +20,9 @@ import TerritoriesPage from './pages/TerritoriesPage';
 import MorePage from './pages/MorePage';
 import AchievementsPage from './pages/AchievementsPage';
 import ScratchPage from './pages/ScratchPage';
+import ChatPage from './pages/ChatPage';
+import CollectionsPage from './pages/CollectionsPage';
+import GoldStorePage from './pages/GoldStorePage';
 import RevengePage from './pages/RevengePage';
 import { Toast, LoadingScreen } from './components/UI';
 
@@ -60,6 +63,9 @@ export default function App() {
           <Route path="territories" element={<TerritoriesPage />} />
           <Route path="achievements" element={<AchievementsPage />} />
           <Route path="scratch" element={<ScratchPage />} />
+          <Route path="chat" element={<ChatPage />} />
+          <Route path="collections" element={<CollectionsPage />} />
+          <Route path="gold" element={<GoldStorePage />} />
           <Route path="revenge" element={<RevengePage />} />
           <Route path="hitlist" element={<HitlistPage />} />
           <Route path="crew" element={<CrewPage />} />

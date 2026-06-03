@@ -12,6 +12,7 @@ import authRoutes from './routes/auth.js';
 import gameRoutes from './routes/game.js';
 import { JWT_SECRET } from './middleware/auth.js';
 import { buildPlayerState, processBotRetaliations } from './services/gameEngine.js';
+import { sendChatMessage } from './services/chatEngine.js';
 import { seedBots } from './db/seed.js';
 import { initDatabase } from './db/index.js';
 import { GAME_NAME, STUDIO } from '../../shared/gameData.js';
@@ -58,8 +59,13 @@ app.use('/assets/items', express.static(path.join(__dirname, '../../client/publi
   immutable: process.env.NODE_ENV === 'production',
 }));
 
+app.use('/assets/avatars', express.static(path.join(__dirname, '../../client/public/assets/avatars'), {
+  maxAge: process.env.NODE_ENV === 'production' ? '30d' : 0,
+  etag: true,
+}));
+
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', game: GAME_NAME, studio: STUDIO, version: '2.0.4' });
+  res.json({ status: 'ok', game: GAME_NAME, studio: STUDIO, version: '2.2.0' });
 });
 
 app.use('/api/auth', authRoutes);
@@ -89,11 +95,34 @@ io.use((socket, next) => {
   } catch { next(new Error('Invalid token')); }
 });
 
-io.on('connection', (socket) => {
+io.on('connection', async (socket) => {
   socket.join(`player:${socket.userId}`);
+  const state = await buildPlayerState(socket.userId);
+  if (state?.crew?.id) socket.join(`crew:${state.crew.id}`);
+
   socket.on('refresh', async () => {
-    const state = await buildPlayerState(socket.userId);
-    socket.emit('state', state);
+    const s = await buildPlayerState(socket.userId);
+    if (s?.crew?.id) socket.join(`crew:${s.crew.id}`);
+    socket.emit('state', s);
+  });
+
+  socket.on('chat:join', async () => {
+    const s = await buildPlayerState(socket.userId);
+    if (s?.crew?.id) socket.join(`crew:${s.crew.id}`);
+  });
+
+  socket.on('chat:send', async ({ channel, message }) => {
+    try {
+      const s = await buildPlayerState(socket.userId);
+      const msg = await sendChatMessage(socket.userId, channel, message);
+      if (channel === 'world') {
+        io.emit('chat:message', { ...msg, channel: 'world' });
+      } else if (channel === 'crew' && s?.crew?.id) {
+        io.to(`crew:${s.crew.id}`).emit('chat:message', { ...msg, channel: 'crew' });
+      }
+    } catch (err) {
+      socket.emit('chat:error', { error: err.message });
+    }
   });
 });
 
