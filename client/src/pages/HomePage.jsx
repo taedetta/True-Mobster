@@ -13,6 +13,7 @@ const QUICK_LINKS = [
   { to: '/mob', asset: 'nav-mob', label: 'Mob' },
   { to: '/hitlist', asset: 'nav-hitlist', label: 'Hitlist' },
   { to: '/hospital', asset: 'hospital', label: 'Hospital' },
+  { to: '/mail', asset: 'chat-messages', label: 'Mail' },
   { to: '/chat', asset: 'chat-world', label: 'Chat' },
   { to: '/crew', asset: 'nav-crew', label: 'Crew' },
   { to: '/profile', asset: 'nav-profile', label: 'Profile' },

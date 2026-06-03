@@ -290,6 +290,7 @@ export async function initDatabase() {
       const pgMigrations = [
         "ALTER TABLE players ADD COLUMN IF NOT EXISTS avatar_id TEXT DEFAULT 'default_01'",
         'ALTER TABLE players ADD COLUMN IF NOT EXISTS avatar_custom TEXT',
+        'ALTER TABLE combat_log ADD COLUMN IF NOT EXISTS fight_details TEXT',
       ];
       for (const m of pgMigrations) {
         try { await client.query(m); } catch { /* */ }
@@ -330,6 +331,7 @@ export async function initDatabase() {
     'ALTER TABLE crews ADD COLUMN level INTEGER DEFAULT 1',
     'ALTER TABLE combat_log ADD COLUMN fight_type TEXT DEFAULT \'fight\'',
     'ALTER TABLE combat_log ADD COLUMN killed INTEGER DEFAULT 0',
+    'ALTER TABLE combat_log ADD COLUMN fight_details TEXT',
     "ALTER TABLE players ADD COLUMN avatar_id TEXT DEFAULT 'default_01'",
     'ALTER TABLE players ADD COLUMN avatar_custom TEXT',
   ];

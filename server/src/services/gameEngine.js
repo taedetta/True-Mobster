@@ -9,7 +9,7 @@ import {
   DAILY_GIFTS_MAX, REFERRAL_BONUS, COLLECTIONS, BOT_NAMES, BASE_STATS, STAT_GROWTH_PER_LEVEL,
   generateReferralCode, GOLD_JOB_CHANCE, PROPERTY_MAX_STACK, DEFAULT_AVATARS, avatarUrl,
   MOB_USABLE_PER_LEVEL, getMobBracket, GODFATHER_STORE, GOLD_STORE, ECONOMY_TICK_MS, getItemById,
-  ITEM_MAX_STACK,
+  ITEM_MAX_STACK, FIGHT_GEAR_LOSS_RATE, itemThumbnailPath,
 } from '../../../shared/gameData.js';
 import db, { isPostgres } from '../db/index.js';
 import { getEffectiveMobSize, getMobAllies, getUnreadPmCount } from './chatEngine.js';
@@ -140,7 +140,7 @@ export async function getTerritoryBonusForCrew(crewId) {
   return bonus;
 }
 
-function calcGearStat(inventory, category, catalog, statKey, usableMob) {
+function allocateGearForFight(inventory, category, catalog, statKey, usableMob) {
   const rows = (inventory || []).filter((i) => i.category === category);
   const items = rows
     .map((r) => {
@@ -152,13 +152,92 @@ function calcGearStat(inventory, category, catalog, statKey, usableMob) {
 
   let remaining = usableMob;
   let total = 0;
+  const used = [];
   for (const item of items) {
     if (remaining <= 0) break;
-    const use = Math.min(remaining, item.qty);
-    total += (item[statKey] || 0) * use;
-    remaining -= use;
+    const qtyUsed = Math.min(remaining, item.qty);
+    total += (item[statKey] || 0) * qtyUsed;
+    remaining -= qtyUsed;
+    used.push({
+      id: item.id,
+      name: item.name,
+      qtyUsed,
+      stat: item[statKey] || 0,
+      category,
+      thumbnail: itemThumbnailPath(category, item.id),
+    });
   }
-  return total;
+  return { total, items: used, mobUsed: usableMob - remaining };
+}
+
+function calcGearStat(inventory, category, catalog, statKey, usableMob) {
+  return allocateGearForFight(inventory, category, catalog, statKey, usableMob).total;
+}
+
+function buildFightSideReport(player, inventory, crewMemberCount) {
+  const crewBonus = Math.min(CREW_MAX_BONUS, crewMemberCount * CREW_BONUS_PER_MEMBER);
+  const effectiveMob = player.effective_mob_size ?? player.mob_size ?? 1;
+  const usableMob = Math.min(effectiveMob, (player.level || 1) * MOB_USABLE_PER_LEVEL);
+  const colBonus = getCollectionBonus(inventory);
+  const territoryBonus = player.territory_bonus ?? 0;
+  const weapons = allocateGearForFight(inventory, 'weapon', WEAPONS, 'attack', usableMob);
+  const armor = allocateGearForFight(inventory, 'armor', ARMOR, 'defense', usableMob);
+  const vehicles = allocateGearForFight(inventory, 'vehicle', VEHICLES, 'defense', usableMob);
+  const mobAttack = weapons.total;
+  const mobArmor = armor.total;
+  const mobVehicle = vehicles.total;
+  const attack = Math.floor((player.attack_skill + mobAttack + colBonus.attack) * (1 + crewBonus + territoryBonus));
+  const defense = Math.floor((player.defense_skill + mobArmor + mobVehicle + colBonus.defense) * (1 + crewBonus + territoryBonus));
+  return {
+    userId: player.user_id,
+    name: player.display_name,
+    level: player.level,
+    usableMob,
+    effectiveMob,
+    attack,
+    defense,
+    weapons: weapons.items,
+    armor: armor.items,
+    vehicles: vehicles.items,
+    gearTotals: { weapons: mobAttack, armor: mobArmor, vehicles: mobVehicle },
+  };
+}
+
+async function decrementInventory(userId, itemId, category, qty) {
+  const owned = await db.get('SELECT quantity FROM inventory WHERE user_id=? AND item_id=? AND category=?', [userId, itemId, category]);
+  if (!owned) return 0;
+  const ownedQty = Number(owned.quantity || 1);
+  const lose = Math.min(qty, ownedQty);
+  if (ownedQty <= lose) {
+    await db.run('DELETE FROM inventory WHERE user_id=? AND item_id=? AND category=?', [userId, itemId, category]);
+  } else {
+    await db.run('UPDATE inventory SET quantity=quantity-? WHERE user_id=? AND item_id=? AND category=?', [lose, userId, itemId, category]);
+  }
+  return lose;
+}
+
+async function applyFightGearLoss(userId, sideReport, fightType) {
+  const rate = FIGHT_GEAR_LOSS_RATE[fightType] ?? FIGHT_GEAR_LOSS_RATE.fight;
+  const lost = [];
+  const groups = [
+    { key: 'weapons', category: 'weapon' },
+    { key: 'armor', category: 'armor' },
+    { key: 'vehicles', category: 'vehicle' },
+  ];
+  for (const { key, category } of groups) {
+    for (const item of sideReport[key] || []) {
+      if (!item.qtyUsed) continue;
+      const loseQty = Math.max(1, Math.floor(item.qtyUsed * rate));
+      const qtyLost = await decrementInventory(userId, item.id, category, loseQty);
+      if (qtyLost > 0) lost.push({ ...item, qtyLost });
+    }
+  }
+  return lost;
+}
+
+function parseFightDetails(raw) {
+  if (!raw) return null;
+  try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { return null; }
 }
 
 export async function getCombatStats(player, crewMemberCount = 0, inventory = []) {
@@ -290,17 +369,34 @@ export async function resolveFight(attackerId, defenderId, fightType = 'fight') 
 
   const invA = await db.all('SELECT * FROM inventory WHERE user_id=?', [attackerId]);
   const invD = await db.all('SELECT * FROM inventory WHERE user_id=?', [defenderId]);
-  const atkStats = await getCombatStats(attacker, await getCrewMemberCount(attacker.crew_id), invA);
-  const defStats = await getCombatStats(defender, await getCrewMemberCount(defender.crew_id), invD);
+  const crewA = await getCrewMemberCount(attacker.crew_id);
+  const crewD = await getCrewMemberCount(defender.crew_id);
+  const atkReport = buildFightSideReport(attacker, invA, crewA);
+  const defReport = buildFightSideReport(defender, invD, crewD);
+  const atkStats = {
+    attack: atkReport.attack, defense: atkReport.defense, usableMob: atkReport.usableMob,
+    effectiveMob: atkReport.effectiveMob, crewBonus: Math.min(CREW_MAX_BONUS, crewA * CREW_BONUS_PER_MEMBER),
+    mobBonus: atkReport.usableMob / Math.max(1, atkReport.effectiveMob),
+    gearUsed: atkReport.gearTotals,
+  };
+  const defStats = {
+    attack: defReport.attack, defense: defReport.defense, usableMob: defReport.usableMob,
+    effectiveMob: defReport.effectiveMob, crewBonus: Math.min(CREW_MAX_BONUS, crewD * CREW_BONUS_PER_MEMBER),
+    mobBonus: defReport.usableMob / Math.max(1, defReport.effectiveMob),
+    gearUsed: defReport.gearTotals,
+  };
 
   const powerRatio = atkStats.attack / Math.max(1, defStats.defense);
   const winChance = Math.min(0.95, Math.max(0.05, 0.5 + (powerRatio - 1) * 0.25));
   const attackerWon = Math.random() < winChance;
 
   let moneyStolen = 0, respectGained = 0, bountyClaimed = 0, killed = 0;
+  let attackerItemsLost = [];
+  let defenderItemsLost = [];
   const hitlistEntry = await db.get('SELECT * FROM hitlist WHERE target_id=? AND claimed=0 ORDER BY bounty DESC LIMIT 1', [defenderId]);
 
   if (attackerWon) {
+    defenderItemsLost = await applyFightGearLoss(defenderId, defReport, fightType);
     moneyStolen = randomInt(ft.money[0], Math.min(ft.money[1], Math.floor(defender.money * 0.15)));
     moneyStolen = Math.min(moneyStolen, defender.money);
     respectGained = ft.respect;
@@ -318,20 +414,68 @@ export async function resolveFight(attackerId, defenderId, fightType = 'fight') 
     await db.run('UPDATE players SET money=CASE WHEN money-? < 0 THEN 0 ELSE money-? END, health=?, losses=losses+1 WHERE user_id=?',
       [moneyStolen - (hitlistEntry ? bountyClaimed : 0), moneyStolen - (hitlistEntry ? bountyClaimed : 0), defHealth, defenderId]);
     if (defender.is_bot) await scheduleBotRetaliation(defenderId, attackerId);
-    await sendMail(defenderId, 'You were attacked!', `${attacker.display_name} ${fightType}ed you and won $${moneyStolen}.`, 'combat');
-    await addNews(attackerId, 'fight_win', `${attacker.display_name} defeated ${defender.display_name}`);
-    await trackMission(attackerId, 'wins');
   } else {
+    attackerItemsLost = await applyFightGearLoss(attackerId, atkReport, fightType);
     const dmg = randomInt(ft.damage[0] + 5, ft.damage[1] + 10);
     await db.run('UPDATE players SET stamina=stamina-?, health=CASE WHEN health-? < 0 THEN 0 ELSE health-? END, losses=losses+1 WHERE user_id=?', [ft.stamina, dmg, dmg, attackerId]);
-    await sendMail(defenderId, 'Defense successful', `${attacker.display_name} attacked you but failed!`, 'combat');
+  }
+
+  const fightReport = {
+    fightType,
+    attackerWon: !!attackerWon,
+    moneyStolen,
+    respectGained,
+    bountyClaimed,
+    killed: !!killed,
+    winChance: Math.round(winChance * 100),
+    attacker: { ...atkReport, itemsLost: attackerItemsLost },
+    defender: { ...defReport, itemsLost: defenderItemsLost },
+  };
+
+  if (attackerWon) {
+    await addNews(attackerId, 'fight_win', `${attacker.display_name} defeated ${defender.display_name}`);
+    await trackMission(attackerId, 'wins');
   }
 
   await addXp(attacker, attackerWon ? ft.xpWin : ft.xpLose);
-  await db.run('INSERT INTO combat_log (attacker_id, defender_id, fight_type, attacker_won, money_stolen, respect_gained, bounty_claimed, killed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [attackerId, defenderId, fightType, attackerWon ? 1 : 0, moneyStolen, respectGained, bountyClaimed, killed]);
+  await db.run(
+    'INSERT INTO combat_log (attacker_id, defender_id, fight_type, attacker_won, money_stolen, respect_gained, bounty_claimed, killed, fight_details) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [attackerId, defenderId, fightType, attackerWon ? 1 : 0, moneyStolen, respectGained, bountyClaimed, killed, JSON.stringify(fightReport)],
+  );
+  const lastLog = await db.get(
+    'SELECT id FROM combat_log WHERE attacker_id=? AND defender_id=? ORDER BY id DESC LIMIT 1',
+    [attackerId, defenderId],
+  );
+  fightReport.combatLogId = lastLog?.id ?? null;
+
+  const lossSummary = (items) => items.length
+    ? items.map((i) => `${i.qtyLost}x ${i.name}`).join(', ')
+    : 'None';
+
+  if (attackerWon) {
+    await sendMail(
+      defenderId,
+      'You were attacked!',
+      `${attacker.display_name} ${fightType}ed you and won $${moneyStolen.toLocaleString()}. You lost: ${lossSummary(defenderItemsLost)}.`,
+      'combat',
+      { fightReport, role: 'defender', combatLogId: fightReport.combatLogId },
+    );
+  } else {
+    await sendMail(
+      defenderId,
+      'Defense successful',
+      `${attacker.display_name} attacked you but failed! They lost: ${lossSummary(attackerItemsLost)}.`,
+      'combat',
+      { fightReport, role: 'defender', combatLogId: fightReport.combatLogId },
+    );
+  }
+
   await checkAchievements(attackerId);
-  return { attackerWon, moneyStolen, respectGained, bountyClaimed, killed, hitlistBonus: bountyClaimed > 0, atkStats, defStats, winChance: Math.round(winChance * 100), fightType };
+  return {
+    attackerWon, moneyStolen, respectGained, bountyClaimed, killed,
+    hitlistBonus: bountyClaimed > 0, atkStats, defStats,
+    winChance: Math.round(winChance * 100), fightType, fightReport, combatLogId,
+  };
 }
 
 async function scheduleBotRetaliation(botId, targetId) {
@@ -735,7 +879,12 @@ export async function processReferral(newUserId, referralCode) {
 }
 
 export async function getMail(userId) {
-  return db.all('SELECT * FROM mail WHERE user_id=? ORDER BY created_at DESC LIMIT 50', [userId]);
+  const rows = await db.all('SELECT * FROM mail WHERE user_id=? ORDER BY created_at DESC LIMIT 50', [userId]);
+  return rows.map((row) => {
+    let data = {};
+    try { data = row.data ? (typeof row.data === 'string' ? JSON.parse(row.data) : row.data) : {}; } catch { /* */ }
+    return { ...row, data };
+  });
 }
 
 export async function readMail(userId, mailId) {
@@ -1077,7 +1226,19 @@ export async function listCrews(limit = 30) {
 }
 
 export async function getCombatHistory(userId, limit = 20) {
-  return db.all(`SELECT cl.*, atk.display_name as attacker_name, def.display_name as defender_name
+  const rows = await db.all(`SELECT cl.*, atk.display_name as attacker_name, def.display_name as defender_name
     FROM combat_log cl JOIN players atk ON atk.user_id=cl.attacker_id JOIN players def ON def.user_id=cl.defender_id
     WHERE cl.attacker_id=? OR cl.defender_id=? ORDER BY cl.created_at DESC LIMIT ?`, [userId, userId, limit]);
+  return rows.map((row) => {
+    const isAttacker = row.attacker_id === userId;
+    const fightReport = parseFightDetails(row.fight_details);
+    return {
+      ...row,
+      fightReport,
+      isAttacker,
+      playerWon: isAttacker ? !!row.attacker_won : !row.attacker_won,
+      opponent_name: isAttacker ? row.defender_name : row.attacker_name,
+      opponent_id: isAttacker ? row.defender_id : row.attacker_id,
+    };
+  });
 }

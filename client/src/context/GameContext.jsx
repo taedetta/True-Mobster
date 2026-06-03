@@ -31,9 +31,17 @@ export function GameProvider({ children }) {
   }, [user, showMessage]);
 
   const loadCatalog = useCallback(async () => {
+    const cached = sessionStorage.getItem('tm_catalog');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setCatalog(parsed);
+      } catch { /* refresh below */ }
+    }
     try {
       const data = await api('/game/catalog');
       setCatalog(data);
+      sessionStorage.setItem('tm_catalog', JSON.stringify(data));
       return data;
     } catch (err) {
       showMessage(err.message, 'error');
@@ -48,6 +56,7 @@ export function GameProvider({ children }) {
       setState(null);
       setCatalog(null);
       setLoading(false);
+      sessionStorage.removeItem('tm_catalog');
       socketRef.current?.disconnect();
       socketRef.current = null;
       return;

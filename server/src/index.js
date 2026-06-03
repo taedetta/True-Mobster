@@ -54,13 +54,15 @@ app.use('/api/game/fight', actionLimiter);
 app.use('/api/game/buy', actionLimiter);
 
 app.use('/assets/items', express.static(path.join(__dirname, '../../client/public/assets/items'), {
-  maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
+  maxAge: process.env.NODE_ENV === 'production' ? '30d' : 0,
   etag: true,
+  immutable: process.env.NODE_ENV === 'production',
 }));
 
 app.use('/assets/ui', express.static(path.join(__dirname, '../../client/public/assets/ui'), {
-  maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
+  maxAge: process.env.NODE_ENV === 'production' ? '30d' : 0,
   etag: true,
+  immutable: process.env.NODE_ENV === 'production',
 }));
 
 app.use('/assets/avatars', express.static(path.join(__dirname, '../../client/public/assets/avatars'), {
@@ -69,7 +71,7 @@ app.use('/assets/avatars', express.static(path.join(__dirname, '../../client/pub
 }));
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', game: GAME_NAME, studio: STUDIO, version: '2.3.1' });
+  res.json({ status: 'ok', game: GAME_NAME, studio: STUDIO, version: '2.4.0' });
 });
 
 app.use('/api/auth', authRoutes);

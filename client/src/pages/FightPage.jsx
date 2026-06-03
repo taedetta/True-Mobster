@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { api, formatMoney } from '../api';
 import { uiAsset } from '../utils/assets';
+import FightResultModal from '../components/FightResultModal';
 
 const FIGHT_TYPES = [
   { id: 'slap', label: 'Slap', asset: 'fight-slap', stamina: 1, desc: 'Light hit, low risk' },
@@ -20,35 +21,51 @@ export default function FightPage() {
   const [busy, setBusy] = useState(null);
   const [tab, setTab] = useState('rivals');
   const [fightType, setFightType] = useState('fight');
+  const [fightResult, setFightResult] = useState(null);
+  const [resultOpponent, setResultOpponent] = useState('');
+  const [resultPerspective, setResultPerspective] = useState('attacker');
+
+  const loadLists = useCallback(() => {
+    api('/game/fight-list').then(setTargets).catch(() => {});
+    api('/game/combat-history').then(setHistory).catch(() => {});
+    gameGet('/revenge').then((d) => setRevenge(d.players || d || [])).catch(() => {});
+  }, [gameGet]);
 
   useEffect(() => {
     if (!state) return;
-    api('/game/fight-list').then(setTargets);
-    api('/game/combat-history').then(setHistory);
-    gameGet('/revenge').then((d) => setRevenge(d.players || d || [])).catch(() => {});
-  }, [state, gameGet]);
+    loadLists();
+  }, [state?.user_id, loadLists]);
 
   useEffect(() => {
-    if (location.state?.targetId && targets.length) {
-      const t = targets.find((x) => x.user_id === location.state.targetId);
-      if (t) setTab('rivals');
-    }
+    if (location.state?.targetId && targets.length) setTab('rivals');
   }, [location.state, targets]);
 
   const fight = async (targetId, name) => {
     setBusy(targetId);
     try {
       const result = await action('/fight', { targetId, fightType });
-      const typeLabel = FIGHT_TYPES.find((f) => f.id === fightType)?.label || 'Fight';
-      showMessage(
-        result?.attackerWon ? `${typeLabel} victory vs ${name}! +${formatMoney(result.moneyStolen)}` : `Defeated by ${name}`,
-        result?.attackerWon ? 'success' : 'error',
-      );
-      api('/game/fight-list').then(setTargets);
-      api('/game/combat-history').then(setHistory);
-      gameGet('/revenge').then((d) => setRevenge(d.players || d || [])).catch(() => {});
+      if (result?.fightReport) {
+        setFightResult(result.fightReport);
+        setResultOpponent(name);
+        setResultPerspective('attacker');
+      } else {
+        const typeLabel = FIGHT_TYPES.find((f) => f.id === fightType)?.label || 'Fight';
+        showMessage(
+          result?.attackerWon ? `${typeLabel} victory vs ${name}! +${formatMoney(result.moneyStolen)}` : `Defeated by ${name}`,
+          result?.attackerWon ? 'success' : 'error',
+        );
+      }
+      loadLists();
     } catch { /* handled */ }
     setBusy(null);
+  };
+
+  const openHistoryReport = (entry) => {
+    if (entry.fightReport) {
+      setFightResult(entry.fightReport);
+      setResultOpponent(entry.opponent_name || 'Unknown');
+      setResultPerspective(entry.isAttacker ? 'attacker' : 'defender');
+    }
   };
 
   if (!state) return null;
@@ -64,7 +81,7 @@ export default function FightPage() {
       <div className="flex-1 min-w-0">
         <Link to={`/player/${t.user_id}`} className="font-semibold text-sm hover:text-mob-gold">{t.display_name}</Link>
         {t.is_bot && <span className="text-xs text-gray-500"> (Bot)</span>}
-        <p className="text-xs text-gray-400">Lv.{t.level} · {t.respect} respect · {t.wins}W/{t.losses}L</p>
+        <p className="text-xs text-gray-400">Lv.{t.level} · {t.respect} respect · Mob {t.effective_mob || t.mob_size}</p>
         <p className="text-xs text-red-400">HP {t.health}/{t.max_health}</p>
       </div>
       <button
@@ -79,6 +96,15 @@ export default function FightPage() {
 
   return (
     <div className="space-y-4">
+      {fightResult && (
+        <FightResultModal
+          report={fightResult}
+          perspective={resultPerspective}
+          opponentName={resultOpponent}
+          onClose={() => setFightResult(null)}
+        />
+      )}
+
       <div className="card">
         <h3 className="font-semibold text-sm mb-2">Fight Type</h3>
         <div className="grid grid-cols-3 gap-2">
@@ -89,13 +115,14 @@ export default function FightPage() {
               onClick={() => setFightType(f.id)}
               className={`py-2 rounded-lg text-xs text-center border ${fightType === f.id ? 'border-mob-gold bg-mob-gold/10 text-mob-gold' : 'border-mob-border'}`}
             >
-              <img src={uiAsset(f.asset)} alt="" className="w-10 h-10 object-contain mx-auto mb-1" />
+              <img src={uiAsset(f.asset)} alt="" className="w-10 h-10 object-contain mx-auto mb-1" loading="eager" decoding="async" />
               {f.label}
               <span className="block text-gray-500">💪{f.stamina}</span>
             </button>
           ))}
         </div>
         <p className="text-xs text-gray-500 mt-2">{selectedType?.desc}</p>
+        <p className="text-[10px] text-gray-600 mt-1">Each mob member uses 1 weapon, armor & vehicle — losers may lose gear used.</p>
       </div>
 
       <div className="flex gap-1">
@@ -133,12 +160,24 @@ export default function FightPage() {
         <div className="space-y-2">
           {history.length === 0 && <p className="text-gray-500 text-sm text-center">No combat history</p>}
           {history.map((h) => (
-            <div key={h.id} className="card text-sm">
-              <p className={h.attacker_won ? 'text-green-400' : 'text-red-400'}>
-                {h.attacker_won ? 'Won' : 'Lost'} vs {h.opponent_name || 'Unknown'}
-              </p>
-              <p className="text-xs text-gray-500">{new Date(h.created_at).toLocaleString()}</p>
-            </div>
+            <button
+              key={h.id}
+              type="button"
+              className="card text-sm w-full text-left hover:border-mob-gold/30"
+              onClick={() => openHistoryReport(h)}
+            >
+              <div className="flex justify-between items-start gap-2">
+                <p className={h.playerWon ? 'text-green-400' : 'text-red-400'}>
+                  {h.playerWon ? 'Won' : 'Lost'} vs {h.opponent_name || 'Unknown'}
+                </p>
+                <span className="text-[10px] text-gray-500 uppercase">{h.fight_type || 'fight'}</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">{new Date(h.created_at).toLocaleString()}</p>
+              {h.money_stolen > 0 && h.isAttacker && h.attacker_won && (
+                <p className="text-xs text-green-400 mt-1">+{formatMoney(h.money_stolen)}</p>
+              )}
+              {h.fightReport && <p className="text-[10px] text-mob-gold mt-1">Tap for full fight report →</p>}
+            </button>
           ))}
         </div>
       )}

@@ -5,11 +5,11 @@ import { uiAsset } from '../utils/assets';
 
 const LINKS = [
   { to: '/godfather', asset: 'godfather', label: 'The Godfather' },
+  { to: '/mail', asset: 'chat-messages', label: 'Mail' },
   { to: '/hitlist', asset: 'nav-hitlist', label: 'Hitlist' },
   { to: '/boss', asset: 'nav-boss', label: 'Boss Fights' },
   { to: '/crew', asset: 'nav-crew', label: 'Crew' },
   { to: '/hospital', asset: 'hospital', label: 'Hospital' },
-  { to: '/mail', asset: 'chat-messages', label: 'Mail' },
   { to: '/profile', asset: 'nav-profile', label: 'Profile' },
   { to: '/daily', asset: 'nav-daily', label: 'Daily Rewards' },
   { to: '/revenge', asset: 'fight-execute', label: 'Revenge List' },
@@ -42,7 +42,7 @@ export default function MorePage() {
       )}
 
       <div className="card text-xs text-gray-500 text-center">
-        True Mobsters v2.3.1 · iMobsters-style by VisionIt
+        True Mobsters v2.4.0 · iMobsters-style by VisionIt
       </div>
     </div>
   );

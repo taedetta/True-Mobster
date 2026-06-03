@@ -43,6 +43,9 @@ export const FIGHT_TYPES = {
   execute: { stamina: 2, xpWin: 30, xpLose: 8, money: [300, 1200], respect: 5, damage: [25, 50], killChance: 0.15, label: 'Execute' },
 };
 
+/** iMobsters-style gear loss on fight defeat (% of gear used in that fight) */
+export const FIGHT_GEAR_LOSS_RATE = { slap: 0.05, fight: 0.1, execute: 0.2 };
+
 export const LOCATIONS = [
   { id: 'downtown', name: 'Downtown', minLevel: 1, color: '#6366f1', city: 'Metro City' },
   { id: 'industrial', name: 'Industrial District', minLevel: 5, color: '#78716c', city: 'Metro City' },
@@ -236,7 +239,7 @@ export function getItemById(id) {
   return ALL_ITEMS.find((i) => i.id === id) || JOBS.find((j) => j.id === id) || LOCATIONS.find((l) => l.id === id) || BOSSES.find((b) => b.id === id);
 }
 
-export const ASSET_VERSION = '2.3.1';
+export const ASSET_VERSION = '2.4.0';
 
 export function itemThumbnailPath(category, id) {
   return `/assets/items/${category}_${id}.webp?v=${ASSET_VERSION}`;

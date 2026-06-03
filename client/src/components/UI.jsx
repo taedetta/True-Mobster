@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { formatMoney } from '../api';
 import ItemImage from './ItemImage';
 import { useState } from 'react';
@@ -140,6 +141,12 @@ export function PlayerHeader({ state }) {
         <p className="text-[10px] text-gray-500 mt-2 text-center">
           Regen: ⚡ {formatCountdown(state.regenAt.energy) || 'full'} · 💪 {formatCountdown(state.regenAt.stamina) || 'full'} · ❤️ {formatCountdown(state.regenAt.health) || 'full'}
         </p>
+      )}
+
+      {(state.unreadMail > 0) && (
+        <Link to="/mail" className="mt-3 block p-2 rounded-lg bg-red-900/20 border border-red-800/40 text-center text-xs text-red-300 hover:border-red-600/50">
+          ⚔ {state.unreadMail} unread combat mail — tap to view offline attacks
+        </Link>
       )}
 
       {state.in_jail_until && new Date(state.in_jail_until) > new Date() && (
