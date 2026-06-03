@@ -101,7 +101,7 @@ export default function ShopPage() {
             return (
               <div key={inv.item_id} className="space-y-2">
                 <ShopItemCard
-                  item={{ ...item, category: tab, thumbnail: item.thumbnail || `/assets/items/${tab}_${item.id}.webp?v=2.3.1` }}
+                  item={{ ...item, category: tab, thumbnail: item.thumbnail }}
                   ownedQty={qty}
                   playerLevel={state.level}
                   playerMoney={state.money}
@@ -120,7 +120,7 @@ export default function ShopPage() {
           {shopItems.map((item) => (
             <ShopItemCard
               key={item.id}
-              item={{ ...item, category: 'consumable', thumbnail: item.thumbnail || `/assets/items/consumable_${item.id}.webp?v=2.3.1` }}
+              item={{ ...item, category: 'consumable', thumbnail: item.thumbnail }}
               ownedQty={qtyMap[item.id] || 0}
               playerLevel={state.level}
               playerMoney={state.money}

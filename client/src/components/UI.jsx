@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { formatMoney } from '../api';
 import ItemImage from './ItemImage';
+import { useGame } from '../context/GameContext';
 import { useState } from 'react';
 
 function formatCountdown(isoOrMs) {
@@ -62,10 +63,20 @@ export function StatBar({ label, current, max, type = 'energy', icon }) {
 export function PlayerHeader({ state }) {
 
   if (!state) return null;
-
+  const { action } = useGame();
+  const [bailing, setBailing] = useState(false);
   const xpPct = state.xpNeeded > 0 ? (state.xp / state.xpNeeded) * 100 : 0;
+  const inJail = state.in_jail_until && new Date(state.in_jail_until) > new Date();
+  const bailMinutes = inJail ? Math.ceil((new Date(state.in_jail_until) - Date.now()) / 60000) : 0;
+  const bailCost = bailMinutes * 50;
 
-
+  const payBail = async () => {
+    setBailing(true);
+    try {
+      await action('/safehouse/bail', {}, `Bail paid — $${bailCost.toLocaleString()}`);
+    } catch { /* */ }
+    setBailing(false);
+  };
 
   return (
 
@@ -149,11 +160,14 @@ export function PlayerHeader({ state }) {
         </Link>
       )}
 
-      {state.in_jail_until && new Date(state.in_jail_until) > new Date() && (
+      {inJail && (
 
-        <div className="mt-3 p-3 bg-red-900/30 border border-red-800/50 rounded-xl text-sm text-red-300 text-center">
+        <div className="mt-3 p-3 bg-red-900/30 border border-red-800/50 rounded-xl text-sm text-red-300 text-center space-y-2">
 
-          🔒 In jail until {new Date(state.in_jail_until).toLocaleTimeString()}
+          <p>🔒 In jail until {new Date(state.in_jail_until).toLocaleTimeString()}</p>
+          <button type="button" className="btn-primary text-xs w-full" disabled={bailing || state.money < bailCost} onClick={payBail}>
+            {bailing ? 'Paying...' : `Pay Bail $${bailCost.toLocaleString()}`}
+          </button>
 
         </div>
 

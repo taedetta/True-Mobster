@@ -11,7 +11,7 @@ import {
   addFriend, removeFriend, getFriends, sendGift, getGifts, claimGifts,
   getMail, readMail, readAllMail, getNews, getRevengeList, getPlayerProfile,
   getTerritories, declareTerritoryWar, donateToCrew, kickCrewMember, transferLeadership,
-  updateAvatar, updateCustomAvatar, buyGodfatherItem, buyGoldStoreItem, getCollectionProgress,
+  updateAvatar, updateCustomAvatar, buyGodfatherItem, buyGoldStoreItem, getCollectionProgress, getBossList,
 } from '../services/gameEngine.js';
 import {
   sendChatMessage, getChatMessages, sendPrivateMessage, getPrivateMessages,
@@ -265,7 +265,7 @@ router.post('/meta/scratch', wrap(async (req) => {
   return { ...result, state: await buildPlayerState(req.userId) };
 }));
 
-router.get('/meta/bosses', wrap(async () => BOSSES));
+router.get('/meta/bosses', wrap(async (req) => ({ bosses: await getBossList(req.userId) })));
 
 router.post('/meta/boss/fight', wrap(async (req) => {
   const result = await fightBoss(req.userId, req.body.bossId);

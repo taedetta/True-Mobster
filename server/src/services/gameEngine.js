@@ -9,7 +9,7 @@ import {
   DAILY_GIFTS_MAX, REFERRAL_BONUS, COLLECTIONS, BOT_NAMES, BASE_STATS, STAT_GROWTH_PER_LEVEL,
   generateReferralCode, GOLD_JOB_CHANCE, PROPERTY_MAX_STACK, DEFAULT_AVATARS, avatarUrl,
   MOB_USABLE_PER_LEVEL, getMobBracket, GODFATHER_STORE, GOLD_STORE, ECONOMY_TICK_MS, getItemById,
-  ITEM_MAX_STACK, FIGHT_GEAR_LOSS_RATE, itemThumbnailPath,
+  ITEM_MAX_STACK, FIGHT_GEAR_LOSS_RATE, itemThumbnailPath, JOB_LOOT,
 } from '../../../shared/gameData.js';
 import db, { isPostgres } from '../db/index.js';
 import { getEffectiveMobSize, getMobAllies, getUnreadPmCount } from './chatEngine.js';
@@ -306,7 +306,6 @@ export async function sendMail(userId, subject, body, mailType = 'system', data 
 }
 
 export async function addNews(userId, eventType, message) {
-  await db.run('INSERT INTO news_feed (user_id, event_type, message) VALUES (?, ?, ?)', [userId, eventType, message]);
   await db.run('INSERT INTO news_feed (user_id, event_type, message) VALUES (NULL, ?, ?)', [eventType, message]);
 }
 
@@ -324,6 +323,30 @@ async function trackMission(userId, type, amount = 1) {
   await db.run('UPDATE players SET daily_mission_progress=? WHERE user_id=?', [JSON.stringify(progress), userId]);
 }
 
+async function grantInventoryItem(userId, itemId, category, qty = 1) {
+  const lists = { weapon: WEAPONS, armor: ARMOR, vehicle: VEHICLES, property: PROPERTIES, consumable: CONSUMABLES };
+  const item = lists[category]?.find((i) => i.id === itemId);
+  if (!item) return null;
+  await db.run(
+    `INSERT INTO inventory (user_id, item_id, category, quantity) VALUES (?, ?, ?, ?)
+     ON CONFLICT(user_id, item_id) DO UPDATE SET quantity=inventory.quantity+excluded.quantity`,
+    [userId, itemId, category, qty],
+  );
+  return { id: item.id, name: item.name, category, qty, thumbnail: itemThumbnailPath(category, itemId) };
+}
+
+function rollJobLoot(job) {
+  const pool = JOB_LOOT[job.artSlug] || JOB_LOOT.default || [];
+  const drops = [];
+  for (const entry of pool) {
+    if (Math.random() < entry.chance) {
+      const qty = entry.qty ? randomInt(entry.qty[0], entry.qty[1]) : 1;
+      drops.push({ itemId: entry.itemId, category: entry.category, qty });
+    }
+  }
+  return drops;
+}
+
 export async function doJob(userId, jobId) {
   const job = JOBS.find((j) => j.id === jobId);
   if (!job) throw new Error('Invalid job');
@@ -336,10 +359,18 @@ export async function doJob(userId, jobId) {
 
   const failed = Math.random() < job.failRate;
   let money = 0, xp = 0, jailed = 0, goldEarned = 0;
+  const loot = [];
   if (!failed) {
     money = randomInt(job.money[0], job.money[1]);
     xp = job.xp;
     if (Math.random() < GOLD_JOB_CHANCE) goldEarned = randomInt(1, 3);
+    for (const drop of rollJobLoot(job)) {
+      const granted = await grantInventoryItem(userId, drop.itemId, drop.category, drop.qty);
+      if (granted) loot.push(granted);
+    }
+    if (loot.length) {
+      await addNews(null, 'job_loot', `${player.display_name} found loot on ${job.name}`);
+    }
   } else {
     jailed = 1;
     await db.run('UPDATE players SET in_jail_until = ? WHERE user_id = ?',
@@ -352,7 +383,7 @@ export async function doJob(userId, jobId) {
     [userId, jobId, failed ? 0 : 1, money, xp, jailed]);
   await trackMission(userId, 'jobs');
   if (!failed) await checkAchievements(userId);
-  return { success: !failed, money, xp, goldEarned, jailed: !!jailed, levelResult, job };
+  return { success: !failed, money, xp, goldEarned, favorEarned: goldEarned, jailed: !!jailed, levelResult, job, loot };
 }
 
 export async function resolveFight(attackerId, defenderId, fightType = 'fight') {
@@ -786,12 +817,37 @@ export async function scratchCard(userId) {
   return { prize: prize.label, amount, gold: prize.gold, energy: prize.energy, jackpot: !!prize.jackpot };
 }
 
+export async function getBossList(userId) {
+  const today = todayStr();
+  let defeatedRows = [];
+  if (isPostgres) {
+    defeatedRows = await db.all(
+      `SELECT DISTINCT boss_id FROM boss_fights WHERE user_id=? AND won=1 AND created_at::date = ?::date`,
+      [userId, today],
+    );
+  } else {
+    defeatedRows = await db.all(
+      `SELECT DISTINCT boss_id FROM boss_fights WHERE user_id=? AND won=1 AND date(created_at)=date(?)`,
+      [userId, today],
+    );
+  }
+  const defeatedToday = new Set(defeatedRows.map((r) => r.boss_id));
+  return BOSSES.map((b) => ({
+    ...b,
+    thumbnail: itemThumbnailPath('boss', b.id),
+    defeatedToday: defeatedToday.has(b.id),
+    cooldown: false,
+  }));
+}
+
 export async function fightBoss(userId, bossId) {
   const boss = BOSSES.find((b) => b.id === bossId);
   if (!boss) throw new Error('Invalid boss');
   const player = await getPlayerRow(userId);
   if (player.level < boss.minLevel) throw new Error('Level too low');
   if (player.stamina < boss.stamina) throw new Error('Not enough stamina');
+  const defeated = await getBossList(userId);
+  if (defeated.find((b) => b.id === bossId)?.defeatedToday) throw new Error('Already defeated this boss today');
   const inv = await db.all('SELECT * FROM inventory WHERE user_id=?', [userId]);
   const stats = await getCombatStats(player, await getCrewMemberCount(player.crew_id), inv);
   const winChance = Math.min(0.9, Math.max(0.1, stats.attack / (boss.defense + boss.attack * 0.5)));

@@ -239,7 +239,26 @@ export function getItemById(id) {
   return ALL_ITEMS.find((i) => i.id === id) || JOBS.find((j) => j.id === id) || LOCATIONS.find((l) => l.id === id) || BOSSES.find((b) => b.id === id);
 }
 
-export const ASSET_VERSION = '2.4.0';
+/** iMobsters-style job loot drops by job type (artSlug) */
+export const JOB_LOOT = {
+  pickpocket: [{ itemId: 'w_rusty_knife', category: 'weapon', chance: 0.1, qty: [1, 1] }],
+  mug_runners: [{ itemId: 'w_baseball_bat', category: 'weapon', chance: 0.08, qty: [1, 1] }],
+  fence_goods: [{ itemId: 'a_leather_jacket', category: 'armor', chance: 0.07, qty: [1, 1] }],
+  extortion: [{ itemId: 'w_switchblade', category: 'weapon', chance: 0.06, qty: [1, 1] }, { itemId: 'consumable_stamina_drink', category: 'consumable', chance: 0.05, qty: [1, 1] }],
+  warehouse: [{ itemId: 'a_kevlar_vest', category: 'armor', chance: 0.06, qty: [1, 1] }],
+  truck_jack: [{ itemId: 'v_beaten_sedan', category: 'vehicle', chance: 0.05, qty: [1, 1] }],
+  dock_smuggle: [{ itemId: 'v_speedboat', category: 'vehicle', chance: 0.04, qty: [1, 1] }],
+  counterfeit: [{ itemId: 'w_street_revolver', category: 'weapon', chance: 0.05, qty: [1, 1] }],
+  nightclub: [{ itemId: 'consumable_energy_pack', category: 'consumable', chance: 0.08, qty: [1, 2] }],
+  bank_job: [{ itemId: 'w_compact_smg', category: 'weapon', chance: 0.04, qty: [1, 1] }],
+  arms_deal: [{ itemId: 'w_tactical_rifle', category: 'weapon', chance: 0.03, qty: [1, 1] }],
+  hostile_takeover: [{ itemId: 'a_tactical_vest', category: 'armor', chance: 0.03, qty: [1, 1] }],
+  diamond_run: [{ itemId: 'v_executive_limo', category: 'vehicle', chance: 0.02, qty: [1, 1] }],
+  syndicate_hit: [{ itemId: 'w_assault_rifle', category: 'weapon', chance: 0.02, qty: [1, 1] }],
+  default: [{ itemId: 'consumable_health_kit', category: 'consumable', chance: 0.03, qty: [1, 1] }],
+};
+
+export const ASSET_VERSION = '2.5.1';
 
 export function itemThumbnailPath(category, id) {
   return `/assets/items/${category}_${id}.webp?v=${ASSET_VERSION}`;

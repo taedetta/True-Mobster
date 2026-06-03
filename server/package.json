@@ -9,9 +9,13 @@
     "dev": "node --watch src/index.js",
     "seed": "node src/db/seed.js",
     "generate-thumbnails": "node scripts/generate-thumbnails.js",
+    "generate-ai-art": "node scripts/generate-ai-thumbnails.js",
+    "generate-ui-art": "node scripts/generate-ui-thumbnails.js",
+    "purge-legacy-svg": "node scripts/purge-legacy-svg-art.js",
     "svg-to-webp": "node scripts/svg-to-webp.js",
-    "regenerate-thumbnails": "node scripts/generate-thumbnails.js && node scripts/svg-to-webp.js",
-    "optimize-thumbnails": "node scripts/optimize-thumbnails.js"
+    "regenerate-thumbnails": "node scripts/purge-legacy-svg-art.js && node scripts/generate-ai-thumbnails.js",
+    "optimize-thumbnails": "node scripts/optimize-thumbnails.js",
+    "optimize-webp": "node scripts/optimize-existing-webp.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
