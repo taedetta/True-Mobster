@@ -43,15 +43,15 @@ async function createBot(name, level, stats) {
   const bestVehicle = tierVehicles[Math.min(tierVehicles.length - 1, Math.floor(level / 10))];
 
   if (bestWeapon) {
-    await db.run('INSERT INTO inventory (user_id, item_id, category) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', [id, bestWeapon.id, 'weapon']);
+    await db.run('INSERT INTO inventory (user_id, item_id, category) VALUES (?, ?, ?) ON CONFLICT(user_id, item_id) DO NOTHING', [id, bestWeapon.id, 'weapon']);
     await db.run('UPDATE players SET equipped_weapon=? WHERE user_id=?', [bestWeapon.id, id]);
   }
   if (bestArmor) {
-    await db.run('INSERT INTO inventory (user_id, item_id, category) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', [id, bestArmor.id, 'armor']);
+    await db.run('INSERT INTO inventory (user_id, item_id, category) VALUES (?, ?, ?) ON CONFLICT(user_id, item_id) DO NOTHING', [id, bestArmor.id, 'armor']);
     await db.run('UPDATE players SET equipped_armor=? WHERE user_id=?', [bestArmor.id, id]);
   }
   if (bestVehicle) {
-    await db.run('INSERT INTO inventory (user_id, item_id, category) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', [id, bestVehicle.id, 'vehicle']);
+    await db.run('INSERT INTO inventory (user_id, item_id, category) VALUES (?, ?, ?) ON CONFLICT(user_id, item_id) DO NOTHING', [id, bestVehicle.id, 'vehicle']);
     await db.run('UPDATE players SET equipped_vehicle=? WHERE user_id=?', [bestVehicle.id, id]);
   }
   return id;

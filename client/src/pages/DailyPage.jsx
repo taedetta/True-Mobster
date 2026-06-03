@@ -45,9 +45,9 @@ export default function DailyPage() {
             <button
               className="btn-primary w-full mt-3"
               onClick={claimDaily}
-              disabled={daily.claimed || !daily.canClaim}
+              disabled={!daily.canClaim}
             >
-              {daily.claimed ? 'Already Claimed' : 'Claim Daily Reward'}
+              {daily.canClaim ? 'Claim Daily Reward' : 'Already Claimed Today'}
             </button>
           </>
         ) : (

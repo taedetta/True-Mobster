@@ -232,9 +232,16 @@ const SQLITE_SCHEMA = SCHEMA
   .replace(/NOW\(\)/g, "(datetime('now'))")
   .replace(/INTEGER DEFAULT 0/g, 'INTEGER DEFAULT 0');
 
+function fixSqlForPg(sql) {
+  return sql
+    .replace(/DO UPDATE SET quantity=quantity\+1/g, 'DO UPDATE SET quantity=inventory.quantity+1')
+    .replace(/INSERT INTO inventory \(user_id, item_id, category\) VALUES \(\$\d+, \$\d+, \$\d+\) ON CONFLICT DO NOTHING/g,
+      (m) => m.replace('ON CONFLICT DO NOTHING', 'ON CONFLICT (user_id, item_id) DO NOTHING'));
+}
+
 function toPgParams(sql, params) {
   let i = 0;
-  const pgSql = sql.replace(/\?/g, () => `$${++i}`);
+  const pgSql = fixSqlForPg(sql.replace(/\?/g, () => `$${++i}`));
   return [pgSql, params];
 }
 

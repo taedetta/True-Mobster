@@ -119,7 +119,14 @@ router.get('/player/:userId', wrap(async (req) => getPlayerProfile(req.params.us
 // Mob
 router.get('/mob/info', wrap(async (req) => {
   const p = await buildPlayerState(req.userId);
-  return { mob_size: p.mob_size, max_mob: MOB_MAX_SIZE, bonus: p.combat?.mobBonus, nextCost: MOB_RECRUIT_COST(p.mob_size) };
+  return {
+    mob_size: p.mob_size,
+    max_mob: MOB_MAX_SIZE,
+    bonus: p.combat?.mobBonus,
+    nextCost: MOB_RECRUIT_COST(p.mob_size),
+    recruitCost: MOB_RECRUIT_COST(p.mob_size),
+    dailyRecruited: p.daily_mob_recruited,
+  };
 }));
 
 router.post('/mob/recruit', wrap(async (req) => {
@@ -141,7 +148,17 @@ router.post('/safehouse/bail', wrap(async (req) => {
 // Meta
 router.get('/meta/daily', wrap(async (req) => {
   const state = await buildPlayerState(req.userId);
-  return { canClaim: state.canClaimDaily, streak: state.daily_streak, rewards: DAILY_LOGIN_REWARDS };
+  const streak = state.daily_streak || 0;
+  const nextStreak = state.canClaimDaily ? (streak % 7) + 1 : streak;
+  const todayReward = DAILY_LOGIN_REWARDS[(nextStreak || 1) - 1] || DAILY_LOGIN_REWARDS[0];
+  return {
+    canClaim: state.canClaimDaily,
+    claimed: !state.canClaimDaily,
+    streak,
+    daily_streak: streak,
+    todayReward,
+    rewards: DAILY_LOGIN_REWARDS,
+  };
 }));
 
 router.post('/meta/daily/claim', wrap(async (req) => {
@@ -149,7 +166,10 @@ router.post('/meta/daily/claim', wrap(async (req) => {
   return { ...result, state: await buildPlayerState(req.userId) };
 }));
 
-router.get('/meta/missions', wrap(async (req) => getDailyMissions(req.userId)));
+router.get('/meta/missions', wrap(async (req) => {
+  const missions = await getDailyMissions(req.userId);
+  return { missions };
+}));
 
 router.post('/meta/mission/claim', wrap(async (req) => {
   const result = await claimMission(req.userId, req.body.missionId);

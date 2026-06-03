@@ -117,8 +117,8 @@ export async function addXp(player, amount) {
     max_health += 10;
     leveled = true;
   }
-  await db.run(`UPDATE players SET level=?, xp=?, skill_points=?, max_energy=?, max_stamina=?, max_health=?, energy=MIN(energy+2, ?), health=? WHERE user_id=?`,
-    [level, xp, skill_points, max_energy, max_stamina, max_health, max_energy, max_health, user_id]);
+  await db.run(`UPDATE players SET level=?, xp=?, skill_points=?, max_energy=?, max_stamina=?, max_health=?, energy=?, health=? WHERE user_id=?`,
+    [level, xp, skill_points, max_energy, max_stamina, max_health, Math.min(max_energy, player.energy + 2), max_health, user_id]);
   return { leveled, level, xp, skill_points };
 }
 
@@ -272,9 +272,9 @@ export async function buyItem(userId, itemId, category, useGold = false) {
     await trackMission(userId, 'spent', price);
   }
   if (category === 'consumable') {
-    await db.run(`INSERT INTO inventory (user_id, item_id, category, quantity) VALUES (?, ?, ?, 1) ON CONFLICT(user_id, item_id) DO UPDATE SET quantity=quantity+1`, [userId, itemId, category]);
+    await db.run(`INSERT INTO inventory (user_id, item_id, category, quantity) VALUES (?, ?, ?, 1) ON CONFLICT(user_id, item_id) DO UPDATE SET quantity=inventory.quantity+1`, [userId, itemId, category]);
   } else {
-    await db.run(`INSERT INTO inventory (user_id, item_id, category, quantity) VALUES (?, ?, ?, 1) ON CONFLICT(user_id, item_id) DO UPDATE SET quantity=quantity+1`, [userId, itemId, category]);
+    await db.run(`INSERT INTO inventory (user_id, item_id, category, quantity) VALUES (?, ?, ?, 1) ON CONFLICT(user_id, item_id) DO UPDATE SET quantity=inventory.quantity+1`, [userId, itemId, category]);
   }
   return item;
 }
@@ -304,7 +304,10 @@ export async function useConsumable(userId, itemId) {
   if (item.effect === 'energy') updates.energy = Math.min(player.max_energy, player.energy + item.amount);
   else if (item.effect === 'stamina') updates.stamina = Math.min(player.max_stamina, player.stamina + item.amount);
   else if (item.effect === 'health') updates.health = Math.min(player.max_health, player.health + item.amount);
-  else if (item.effect === 'mob') await db.run('UPDATE players SET mob_size=MIN(mob_size+?, ?) WHERE user_id=?', [item.amount, MOB_MAX_SIZE, userId]);
+  else if (item.effect === 'mob') {
+    const newMob = Math.min(MOB_MAX_SIZE, player.mob_size + item.amount);
+    await db.run('UPDATE players SET mob_size=? WHERE user_id=?', [newMob, userId]);
+  }
   else if (item.effect === 'ice') await db.run('UPDATE players SET iced_until=? WHERE user_id=?',
     [new Date(Date.now() + item.amount * 3600000).toISOString(), userId]);
   else if (item.effect === 'xp_boost') await db.run('UPDATE players SET xp_boost_until=? WHERE user_id=?',
@@ -436,8 +439,10 @@ export async function claimDailyLogin(userId) {
   let streak = lastClaim === yesterday ? (player.daily_streak || 0) + 1 : 1;
   if (streak > 7) streak = 1;
   const reward = DAILY_LOGIN_REWARDS[streak - 1] || DAILY_LOGIN_REWARDS[0];
-  await db.run(`UPDATE players SET money=money+?, gold=gold+?, energy=MIN(energy+?, max_energy), stamina=MIN(stamina+?, max_stamina), last_daily_claim=?, daily_streak=? WHERE user_id=?`,
-    [reward.money, reward.gold, reward.energy || 0, reward.stamina || 0, nowISO(), streak, userId]);
+  const newEnergy = Math.min(player.max_energy, player.energy + (reward.energy || 0));
+  const newStamina = Math.min(player.max_stamina, player.stamina + (reward.stamina || 0));
+  await db.run(`UPDATE players SET money=money+?, gold=gold+?, energy=?, stamina=?, last_daily_claim=?, daily_streak=? WHERE user_id=?`,
+    [reward.money, reward.gold, newEnergy, newStamina, nowISO(), streak, userId]);
   await checkAchievements(userId);
   return { streak, reward };
 }
@@ -530,7 +535,10 @@ export async function scratchCard(userId) {
     amount = randomInt(prize.money[0], prize.money[1]);
     await db.run('UPDATE players SET money=money+? WHERE user_id=?', [amount, userId]);
   }
-  if (prize.energy) await db.run('UPDATE players SET energy=MIN(energy+?, max_energy) WHERE user_id=?', [prize.energy, userId]);
+  if (prize.energy) {
+    const p = await getPlayerRow(userId);
+    await db.run('UPDATE players SET energy=? WHERE user_id=?', [Math.min(p.max_energy, p.energy + prize.energy), userId]);
+  }
   if (prize.gold) await db.run('UPDATE players SET gold=gold+? WHERE user_id=?', [prize.gold, userId]);
   if (prize.jackpot) await db.run('UPDATE players SET scratch_jackpot=1 WHERE user_id=?', [userId]);
   await db.run('INSERT INTO scratch_log (user_id, prize, amount) VALUES (?, ?, ?)', [userId, prize.label, amount]);
@@ -567,8 +575,8 @@ export async function addFriend(userId, friendUsername) {
   const friend = await db.get('SELECT u.id FROM users u WHERE u.username=? AND u.is_bot=0', [friendUsername]);
   if (!friend) throw new Error('Player not found');
   if (friend.id === userId) throw new Error('Cannot add yourself');
-  await db.run('INSERT INTO friends (user_id, friend_id) VALUES (?, ?) ON CONFLICT DO NOTHING', [userId, friend.id]);
-  await db.run('INSERT INTO friends (user_id, friend_id) VALUES (?, ?) ON CONFLICT DO NOTHING', [friend.id, userId]);
+  await db.run('INSERT INTO friends (user_id, friend_id) VALUES (?, ?) ON CONFLICT (user_id, friend_id) DO NOTHING', [userId, friend.id]);
+  await db.run('INSERT INTO friends (user_id, friend_id) VALUES (?, ?) ON CONFLICT (user_id, friend_id) DO NOTHING', [friend.id, userId]);
   return { friendId: friend.id };
 }
 
@@ -605,11 +613,17 @@ export async function getGifts(userId) {
 
 export async function claimGifts(userId) {
   const gifts = await getGifts(userId);
+  const player = await getPlayerRow(userId);
+  let energy = player.energy;
+  let stamina = player.stamina;
   for (const g of gifts) {
     if (g.gift_type === 'money') await db.run('UPDATE players SET money=money+? WHERE user_id=?', [g.amount, userId]);
-    if (g.gift_type === 'energy') await db.run('UPDATE players SET energy=MIN(energy+?, max_energy) WHERE user_id=?', [g.amount, userId]);
-    if (g.gift_type === 'stamina') await db.run('UPDATE players SET stamina=MIN(stamina+?, max_stamina) WHERE user_id=?', [g.amount, userId]);
+    if (g.gift_type === 'energy') energy = Math.min(player.max_energy, energy + g.amount);
+    if (g.gift_type === 'stamina') stamina = Math.min(player.max_stamina, stamina + g.amount);
     await db.run('UPDATE gifts SET claimed=1 WHERE id=?', [g.id]);
+  }
+  if (energy !== player.energy || stamina !== player.stamina) {
+    await db.run('UPDATE players SET energy=?, stamina=? WHERE user_id=?', [energy, stamina, userId]);
   }
   return { claimed: gifts.length };
 }

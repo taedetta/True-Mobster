@@ -19,26 +19,36 @@ export default function GameLayout() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen pb-20 max-w-lg mx-auto">
-      <header className="sticky top-0 z-40 bg-mob-bg/95 backdrop-blur border-b border-mob-border px-4 py-2 flex justify-between items-center">
+    <div className="min-h-screen pb-24 max-w-lg mx-auto">
+      <header className="glass-header px-4 py-3 flex justify-between items-center">
         <div>
-          <span className="font-display text-mob-gold text-lg">True Mobsters</span>
-          <span className="text-xs text-gray-600 ml-2">VisionIt</span>
+          <span className="font-display text-mob-gold text-xl tracking-wide">True Mobsters</span>
+          <span className="text-[10px] text-gray-600 ml-2 uppercase tracking-widest">VisionIt</span>
         </div>
-        <button onClick={() => { logout(); navigate('/login'); }} className="text-xs text-gray-500 hover:text-red-400">Logout</button>
+        <button
+          onClick={() => { logout(); navigate('/login'); }}
+          className="text-xs text-gray-500 hover:text-red-400 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-900/20"
+        >
+          Logout
+        </button>
       </header>
 
-      <main className="p-4">
+      <main className="p-4 animate-fade-up">
         <PlayerHeader state={state} />
         <Outlet />
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-mob-card/95 backdrop-blur border-t border-mob-border z-40">
+      <nav className="glass-nav">
         <div className="max-w-lg mx-auto nav-scroll">
           {tabs.map((tab) => (
-            <NavLink key={tab.to} to={tab.to} end={tab.to === '/'} className={({ isActive }) => `nav-tab ${isActive ? 'active' : ''}`}>
-              <span className="text-lg">{tab.icon}</span>
-              <span>{tab.label}</span>
+            <NavLink
+              key={tab.to}
+              to={tab.to}
+              end={tab.to === '/'}
+              className={({ isActive }) => `nav-tab ${isActive ? 'active' : ''}`}
+            >
+              <span className="text-xl">{tab.icon}</span>
+              <span className="font-medium">{tab.label}</span>
             </NavLink>
           ))}
         </div>

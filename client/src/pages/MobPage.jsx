@@ -23,10 +23,10 @@ export default function MobPage() {
     setBusy(false);
   };
 
-  const mobSize = info?.size ?? state.mob_size ?? 0;
-  const maxSize = info?.maxSize ?? 500;
+  const mobSize = info?.mob_size ?? info?.size ?? state.mob_size ?? 0;
+  const maxSize = info?.max_mob ?? info?.maxSize ?? 500;
   const bonus = info?.bonus ?? state.combat?.mobBonus ?? 0;
-  const cost = info?.recruitCost ?? info?.nextCost;
+  const cost = info?.nextCost ?? info?.recruitCost;
 
   return (
     <div className="space-y-4">
