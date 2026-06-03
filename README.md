@@ -1,92 +1,112 @@
 # True Mobsters
 
-**True Mobsters** is a server-authoritative multiplayer mafia RPG by **VisionIt Studio**. Build your criminal empire, complete jobs, fight rivals, manage crews, and climb the hitlist — inspired by classic mobster games but with entirely original names, assets, and artwork.
+**True Mobsters** by **VisionIt Studio** — a server-authoritative multiplayer mafia RPG inspired by classic mobster games, with 100% original names, artwork, and content.
 
-## Features
+## Live Game
 
-- **Server-side everything** — All stats, combat, economy, and progression are validated on the server. The client cannot modify money, stats, or outcomes.
-- **Jobs** — Location-based missions across 6 districts with energy costs, XP, money, and jail risk
-- **PvP Combat** — Attack other players using stamina; win money and respect
-- **Hitlist** — Place bounties on rivals for bonus rewards when defeated
-- **Shop** — Weapons, armor, vehicles, and income-generating properties
-- **Crews** — Form gangs for combat bonuses
-- **Bank & Hospital** — Store cash safely and heal after fights
-- **20 Bot Rivals** — AI-controlled accounts for PvP that **fight back** when attacked
-- **Leaderboard** — Compete for respect and level rankings
-- **Original SVG thumbnails** — Every job, item, and location has a unique generated thumbnail
+**Play now:** [https://true-mobster.onrender.com](https://true-mobster.onrender.com)
 
-## Quick Start
+**GitHub:** [https://github.com/taedetta/True-Mobster](https://github.com/taedetta/True-Mobster)
 
-### Prerequisites
+## Full Feature Set (iMobsters-style)
 
-- [Node.js](https://nodejs.org/) 18+
+### Core Gameplay
+- **Jobs** — 90+ location-based missions across 12 districts in 3 cities
+- **PvP Combat** — Slap, Fight, and Execute attack types with stamina costs
+- **Mob / Allies** — Recruit up to 500 mob members for combat bonuses
+- **Hitlist** — Place bounties with 1.5x bonus rewards for killers
+- **Boss Battles** — 5 epic PvE bosses with huge payouts
+- **Ice / Safehouse** — Buy protection from attacks
+- **Jail & Bail** — Failed jobs send you to jail; pay bail to escape early
 
-### Install
+### Economy & Gear
+- **20 Weapons, 20 Armor, 15 Vehicles, 15 Properties** — tiered shop with sell-back
+- **6 Consumables** — Energy, stamina, health, mob contracts, ice packs, XP boost
+- **Property Income** — Hourly passive cash collection
+- **Bank** — Deposit and withdraw safely
+- **Hospital** — Heal for cash
+- **Gold Currency** — Premium currency from jobs and achievements
+- **Scratch Cards** — Lottery-style instant prizes
+
+### Social & Multiplayer
+- **30 Bot Rivals** — Attack them; they fight back automatically
+- **Friends & Gifts** — Add friends, send money/energy/stamina
+- **Referral Codes** — Invite players for bonus cash
+- **Crews** — Create gangs, donate, kick, transfer leadership
+- **Territory Wars** — Crew leaders capture zones for bonuses
+- **Mail & News Feed** — Combat notifications and city events
+- **Revenge List** — Track who attacked you
+
+### Progression
+- **Leveling & Skills** — 5 skill trees (attack, defense, energy, stamina, health)
+- **20 Achievements** — Unlock and claim rewards
+- **Daily Login Streak** — 7-day reward cycle
+- **Daily Missions** — Rotating objectives with gold/XP rewards
+- **Collections** — Item set bonuses for combat
+- **Leaderboard** — Respect and level rankings
+
+### Security
+- **100% server-authoritative** — All stats, combat, and economy validated server-side
+- JWT authentication, bcrypt passwords, rate limiting
+- Bots cannot be logged into
+
+## Content Scale
+
+| Category | Count |
+|----------|-------|
+| Locations / Districts | 12 |
+| Jobs | 90+ |
+| Weapons | 20 |
+| Armor | 20 |
+| Vehicles | 15 |
+| Properties | 15 |
+| Consumables | 6 |
+| Bosses | 5 |
+| Territories | 6 |
+| Bot Rivals | 30 |
+| SVG Thumbnails | 186 |
+| Achievements | 20 |
+
+## Local Development
 
 ```bash
 cd "C:\Users\Darth Vader\Desktop\True Mobster"
 npm install
 npm run install:all
 npm run generate-thumbnails
+
+# Terminal 1
+cd server && npm run dev
+
+# Terminal 2
+cd client && npm run dev
 ```
 
-### Run (development)
+Open **http://localhost:5173**
 
-Terminal 1 — Server:
+## Deploy (Render)
+
+The game is deployed on Render as **true-mobster**:
+- Dashboard: https://dashboard.render.com/web/srv-d8focpq8qa3s73ageblg
+- Uses PostgreSQL with isolated `true_mobsters` schema (shared free-tier DB)
+
+To redeploy after changes:
 ```bash
-cd server
-npm run dev
+git push origin main
 ```
-
-Terminal 2 — Client:
-```bash
-cd client
-npm run dev
-```
-
-Open **http://localhost:5173** and register an account.
-
-### Production
-
-```bash
-npm run build
-cd server
-set NODE_ENV=production
-npm start
-```
-
-Serves the built client from the server on port 3001.
-
-## Security
-
-| Layer | Protection |
-|-------|-----------|
-| Auth | JWT tokens, bcrypt password hashing |
-| Game logic | 100% server-side — client sends actions only |
-| Rate limiting | Global + per-action limits on fights/jobs/buys |
-| Validation | All inputs validated; no client-trusted values |
-| Bots | Internal-only credentials, not login-accessible |
-
-Change `JWT_SECRET` in `server/.env` before deploying to production.
+Render auto-deploys from the `main` branch.
 
 ## Project Structure
 
 ```
 True Mobster/
 ├── client/          React + Vite + Tailwind UI
-├── server/          Express + SQLite game server
+├── server/          Express + PostgreSQL/SQLite + Socket.IO
 ├── shared/          Game data definitions
+├── render.yaml      Render Blueprint config
 └── README.md
 ```
 
-## Bot Accounts
-
-On first server start, 20 bot rivals are seeded (ShadowViper, IronFist, etc.) at various levels with gear. Attack them from the **Fight** tab — they will retaliate within 30–120 seconds.
-
 ## Studio
 
-**VisionIt** — True Mobsters v1.0
-
-## License
-
-Private project. All assets and names are original.
+**VisionIt** — True Mobsters v2.0
