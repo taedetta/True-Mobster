@@ -1,20 +1,30 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
+import { uiAsset } from '../utils/assets';
 
 const TABS = [
-  { id: 'world', label: 'World', icon: '🌍' },
-  { id: 'crew', label: 'Mob Chat', icon: '🔫' },
-  { id: 'pm', label: 'Messages', icon: '✉️' },
+  { id: 'world', label: 'World', asset: 'chat-world' },
+  { id: 'crew', label: 'Mob Chat', asset: 'chat-mob' },
+  { id: 'pm', label: 'Messages', asset: 'chat-messages' },
 ];
 
 export default function ChatPage() {
   const { state, gameGet, action, socketRef, showMessage } = useGame();
+  const location = useLocation();
   const [tab, setTab] = useState('world');
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [pms, setPms] = useState({ inbox: [], sent: [] });
   const [pmForm, setPmForm] = useState({ toUsername: '', subject: '', body: '' });
   const bottomRef = useRef(null);
+
+  useEffect(() => {
+    if (location.state?.pmTo) {
+      setTab('pm');
+      setPmForm((f) => ({ ...f, toUsername: location.state.pmTo }));
+    }
+  }, [location.state]);
 
   const loadChat = (channel) => {
     if (channel === 'pm') {
@@ -33,20 +43,13 @@ export default function ChatPage() {
     const s = socketRef.current;
     if (!s) return;
     const onMsg = (msg) => {
-      if (tab === 'world' && msg.channel === 'world') {
-        setMessages((prev) => [...prev, msg].slice(-100));
-      }
-      if (tab === 'crew' && msg.channel === 'crew') {
-        setMessages((prev) => [...prev, msg].slice(-100));
-      }
+      if (tab === 'world' && msg.channel === 'world') setMessages((prev) => [...prev, msg].slice(-100));
+      if (tab === 'crew' && msg.channel === 'crew') setMessages((prev) => [...prev, msg].slice(-100));
     };
     const onErr = (e) => showMessage(e.error, 'error');
     s.on('chat:message', onMsg);
     s.on('chat:error', onErr);
-    return () => {
-      s.off('chat:message', onMsg);
-      s.off('chat:error', onErr);
-    };
+    return () => { s.off('chat:message', onMsg); s.off('chat:error', onErr); };
   }, [tab, socketRef, showMessage]);
 
   useEffect(() => {
@@ -86,9 +89,10 @@ export default function ChatPage() {
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`flex-1 py-2 rounded-lg text-xs border ${tab === t.id ? 'border-mob-gold bg-mob-gold/10 text-mob-gold' : 'border-mob-border'}`}
+            className={`flex-1 py-2 rounded-lg text-xs border flex flex-col items-center gap-1 ${tab === t.id ? 'border-mob-gold bg-mob-gold/10 text-mob-gold' : 'border-mob-border'}`}
           >
-            {t.icon} {t.label}
+            <img src={uiAsset(t.asset)} alt="" className="w-8 h-8 object-contain" />
+            {t.label}
           </button>
         ))}
       </div>
@@ -106,7 +110,7 @@ export default function ChatPage() {
             <h3 className="font-semibold text-sm">Inbox</h3>
             {pms.inbox?.map((m) => (
               <div key={m.id} className={`card text-sm ${!m.read_status ? 'border-mob-gold/30' : ''}`}>
-                <p className="text-mob-gold text-xs">{m.other_name}</p>
+                <Link to={`/player/${m.sender_id || ''}`} className="text-mob-gold text-xs font-semibold hover:underline">{m.other_name}</Link>
                 <p className="font-semibold">{m.subject || '(no subject)'}</p>
                 <p className="text-gray-300 mt-1">{m.body}</p>
               </div>
@@ -122,7 +126,7 @@ export default function ChatPage() {
           <div className="flex-1 overflow-y-auto max-h-80 space-y-2 card min-h-[200px]">
             {messages.map((m) => (
               <div key={m.id} className={`text-sm ${m.user_id === state.user_id ? 'text-right' : ''}`}>
-                <span className="text-mob-gold text-xs font-semibold">{m.display_name}</span>
+                <Link to={`/player/${m.user_id}`} className="text-mob-gold text-xs font-semibold hover:underline">{m.display_name}</Link>
                 <p className="text-gray-200 bg-mob-bg/50 rounded-lg px-2 py-1 inline-block mt-0.5">{m.message}</p>
               </div>
             ))}

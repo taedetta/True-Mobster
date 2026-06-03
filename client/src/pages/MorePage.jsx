@@ -1,68 +1,47 @@
 import { Link } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { formatMoney } from '../api';
+import { uiAsset } from '../utils/assets';
 
 const LINKS = [
-  { to: '/boss', icon: '👹', label: 'Boss Fights' },
-  { to: '/chat', icon: '💬', label: 'Chat' },
-  { to: '/gold', icon: '🪙', label: 'Gold Store' },
-  { to: '/collections', icon: '📦', label: 'Collections' },
-  { to: '/social', icon: '👥', label: 'Social' },
-  { to: '/mail', icon: '📬', label: 'Mail' },
-  { to: '/news', icon: '📰', label: 'News' },
-  { to: '/territories', icon: '🗺️', label: 'Territories' },
-  { to: '/achievements', icon: '🏅', label: 'Achievements' },
-  { to: '/scratch', icon: '🎫', label: 'Scratch Cards' },
-  { to: '/hitlist', icon: '🎯', label: 'Hitlist' },
-  { to: '/crew', icon: '🔫', label: 'Crew' },
-  { to: '/profile', icon: '👤', label: 'Profile' },
-  { to: '/revenge', icon: '💀', label: 'Revenge List' },
+  { to: '/hitlist', asset: 'nav-hitlist', label: 'Hitlist' },
+  { to: '/boss', asset: 'nav-boss', label: 'Boss Fights' },
+  { to: '/crew', asset: 'nav-crew', label: 'Crew' },
+  { to: '/hospital', asset: 'hospital', label: 'Hospital' },
+  { to: '/mail', asset: 'chat-messages', label: 'Mail' },
+  { to: '/profile', asset: 'nav-profile', label: 'Profile' },
+  { to: '/daily', asset: 'nav-daily', label: 'Daily Rewards' },
+  { to: '/revenge', asset: 'fight-execute', label: 'Revenge List' },
 ];
 
 export default function MorePage() {
-  const { state, action } = useGame();
-
-  const inJail = state?.in_jail_until && new Date(state.in_jail_until) > new Date();
-  const iced = state?.iced_until && new Date(state.iced_until) > new Date();
+  const { state } = useGame();
 
   return (
     <div className="space-y-4">
       <h2 className="font-display text-lg text-mob-gold">More</h2>
-
-      <div className="card border-cyan-800/30">
-        <h3 className="font-semibold text-sm mb-2">🛡 Safehouse</h3>
-        {inJail && (
-          <>
-            <p className="text-xs text-red-300 mb-2">In jail until {new Date(state.in_jail_until).toLocaleTimeString()}</p>
-            <button type="button" className="btn-primary w-full text-sm mb-2" onClick={() => action('/safehouse/bail', {}, 'Bailed out!')}>
-              Post Bail
-            </button>
-          </>
-        )}
-        {iced && (
-          <p className="text-xs text-cyan-300 mb-2">Iced until {new Date(state.iced_until).toLocaleTimeString()}</p>
-        )}
-        {!inJail && !iced && <p className="text-xs text-gray-400 mb-2">Buy protection or heal at hospital from Home.</p>}
-        <div className="flex gap-2 flex-wrap">
-          {[1, 4, 8, 24].map((h) => (
-            <button key={h} type="button" className="btn-secondary text-xs flex-1 min-w-[60px]" onClick={() => action('/safehouse/ice', { hours: h }, `Iced for ${h}h`)}>
-              Ice {h}h
-            </button>
-          ))}
-        </div>
-      </div>
+      <p className="text-xs text-gray-500">Core iMobsters features — extras removed for authentic gameplay.</p>
 
       <div className="grid grid-cols-2 gap-2">
         {LINKS.map((l) => (
           <Link key={l.to} to={l.to} className="card flex flex-col items-center py-4 hover:border-mob-gold/40 transition-colors">
-            <span className="text-2xl">{l.icon}</span>
-            <span className="text-xs mt-1 text-gray-300">{l.label}</span>
+            <img src={uiAsset(l.asset)} alt="" className="w-10 h-10 object-contain" />
+            <span className="text-xs mt-2 text-gray-300">{l.label}</span>
           </Link>
         ))}
       </div>
 
+      {state?.economy && (
+        <div className="card text-sm">
+          <p className="text-mob-gold font-semibold mb-2">Economy Summary</p>
+          <p className="text-green-400">Income: {formatMoney(state.economy.grossIncome || 0)}/hr</p>
+          <p className="text-red-400">Upkeep: {formatMoney(state.economy.upkeep || 0)}/hr</p>
+          <p className="text-gray-300 mt-1">Net: {formatMoney(state.economy.netIncome || 0)}/hr (automatic)</p>
+        </div>
+      )}
+
       <div className="card text-xs text-gray-500 text-center">
-        True Mobsters v2.2 · {formatMoney(state?.money || 0)} on hand
+        True Mobsters v2.3 · iMobsters-style by VisionIt
       </div>
     </div>
   );

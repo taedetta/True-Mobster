@@ -9,20 +9,15 @@ import FightPage from './pages/FightPage';
 import ShopPage from './pages/ShopPage';
 import HitlistPage from './pages/HitlistPage';
 import ProfilePage from './pages/ProfilePage';
+import PlayerProfilePage from './pages/PlayerProfilePage';
 import CrewPage from './pages/CrewPage';
 import MobPage from './pages/MobPage';
 import BossPage from './pages/BossPage';
 import DailyPage from './pages/DailyPage';
-import SocialPage from './pages/SocialPage';
 import MailPage from './pages/MailPage';
-import NewsPage from './pages/NewsPage';
-import TerritoriesPage from './pages/TerritoriesPage';
 import MorePage from './pages/MorePage';
-import AchievementsPage from './pages/AchievementsPage';
-import ScratchPage from './pages/ScratchPage';
 import ChatPage from './pages/ChatPage';
-import CollectionsPage from './pages/CollectionsPage';
-import GoldStorePage from './pages/GoldStorePage';
+import HospitalPage from './pages/HospitalPage';
 import RevengePage from './pages/RevengePage';
 import { Toast, LoadingScreen } from './components/UI';
 
@@ -44,10 +39,7 @@ export default function App() {
     <>
       <Toast message={message} />
       <Routes>
-        <Route
-          path="/login"
-          element={user ? <Navigate to="/" replace /> : <LoginPage />}
-        />
+        <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
         <Route path="/" element={<ProtectedRoute><GameLayout /></ProtectedRoute>}>
           <Route index element={<HomePage />} />
           <Route path="jobs" element={<JobsPage />} />
@@ -57,19 +49,14 @@ export default function App() {
           <Route path="daily" element={<DailyPage />} />
           <Route path="more" element={<MorePage />} />
           <Route path="boss" element={<BossPage />} />
-          <Route path="social" element={<SocialPage />} />
           <Route path="mail" element={<MailPage />} />
-          <Route path="news" element={<NewsPage />} />
-          <Route path="territories" element={<TerritoriesPage />} />
-          <Route path="achievements" element={<AchievementsPage />} />
-          <Route path="scratch" element={<ScratchPage />} />
           <Route path="chat" element={<ChatPage />} />
-          <Route path="collections" element={<CollectionsPage />} />
-          <Route path="gold" element={<GoldStorePage />} />
+          <Route path="hospital" element={<HospitalPage />} />
           <Route path="revenge" element={<RevengePage />} />
           <Route path="hitlist" element={<HitlistPage />} />
           <Route path="crew" element={<CrewPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="player/:userId" element={<PlayerProfilePage />} />
         </Route>
         <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
       </Routes>

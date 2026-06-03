@@ -4,6 +4,7 @@ import { useGame } from '../context/GameContext';
 import { ItemCard } from '../components/UI';
 import ItemImage from '../components/ItemImage';
 import { formatMoney } from '../api';
+import { catalogItems } from '../utils/assets';
 
 const SHOP_TABS = [
   { id: 'weapon', label: 'Weapons', icon: '⚔️' },
@@ -39,10 +40,9 @@ export default function ShopPage() {
 
   const isConsumable = tab === 'consumable';
   const isProperty = tab === 'property';
-  const listKey = isProperty ? 'properties' : isConsumable ? 'consumables' : `${tab}s`;
   const shopItems = isConsumable
     ? (catalog.consumables || FALLBACK_CONSUMABLES)
-    : (catalog[listKey] || []);
+    : catalogItems(catalog, tab);
 
   const inventory = state.inventory || [];
   const qtyMap = Object.fromEntries(inventory.map((i) => [i.item_id, Number(i.quantity || 1)]));
@@ -61,7 +61,7 @@ export default function ShopPage() {
 
   const resolveItem = (inv) => {
     const cat = inv.category || tab;
-    const list = cat === 'property' ? catalog.properties : cat === 'consumable' ? (catalog.consumables || FALLBACK_CONSUMABLES) : catalog[`${cat}s`] || [];
+    const list = cat === 'consumable' ? (catalog.consumables || FALLBACK_CONSUMABLES) : catalogItems(catalog, cat);
     return list.find((i) => i.id === inv.item_id) || { id: inv.item_id, name: inv.item_id.replace(/_/g, ' '), category: cat, price: 1000 };
   };
 
@@ -116,6 +116,7 @@ export default function ShopPage() {
                   {isEquipped && <p className="text-xs text-mob-gold">Equipped</p>}
                   {item.effect && <p className="text-xs text-gray-400">{item.effect} +{item.amount}</p>}
                   {isProperty && item.income && <p className="text-xs text-green-400">${item.income}/hr each</p>}
+                  {item.upkeep > 0 && <p className="text-xs text-red-400">${item.upkeep}/hr upkeep</p>}
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
                   {isConsumable ? (
@@ -142,7 +143,7 @@ export default function ShopPage() {
         <div className="space-y-2">
           {shopItems.map((item) => (
             <div key={item.id} className="card flex gap-3 items-center">
-              <ItemImage src={item.thumbnail || `/assets/items/consumable_${item.id}.webp?v=2.2.1`} alt={item.name} size="list" />
+              <ItemImage src={item.thumbnail || `/assets/items/consumable_${item.id}.webp?v=2.3.0`} alt={item.name} size="list" />
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-sm">{item.name}</h3>
                 <p className="text-xs text-gray-400">{item.effect} +{item.amount} · Lv.{item.minLevel}+</p>

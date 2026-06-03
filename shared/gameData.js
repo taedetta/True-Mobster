@@ -9,6 +9,9 @@ export const BASE_STATS = { maxEnergy: 10, maxStamina: 5, maxHealth: 100, attack
 export const STAT_GROWTH_PER_LEVEL = { maxEnergy: 2, maxStamina: 1, maxHealth: 10 };
 
 export const HOSPITAL_COST_PER_HP = 10;
+/** iMobsters-style passive economy tick (minutes) */
+export const ECONOMY_TICK_MINUTES = 60;
+export const ECONOMY_TICK_MS = ECONOMY_TICK_MINUTES * 60 * 1000;
 export const BANK_FEE_PERCENT = 0;
 export const HITLIST_MIN_BOUNTY = 1000;
 export const HITLIST_FEE_PERCENT = 0.1;
@@ -78,6 +81,7 @@ const JOB_TEMPLATES = [
 export const JOBS = LOCATIONS.flatMap((loc, li) =>
   JOB_TEMPLATES.slice(0, 3 + Math.min(li, 6)).map(([slug, name, energy, money, xp, failRate, jailMinutes], ji) => ({
     id: `${loc.id}_${slug}`,
+    artSlug: slug,
     location: loc.id,
     name: `${name} (${loc.name})`,
     energy,
@@ -88,7 +92,7 @@ export const JOBS = LOCATIONS.flatMap((loc, li) =>
   })),
 );
 
-function tieredItems(category, names, statKey, baseStat, basePrice, colors) {
+function tieredItems(category, names, statKey, baseStat, basePrice, colors, { baseUpkeep = 0 } = {}) {
   return names.map((name, i) => ({
     id: `${category}_${name.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`,
     name,
@@ -97,6 +101,7 @@ function tieredItems(category, names, statKey, baseStat, basePrice, colors) {
     minLevel: 1 + i * 4,
     tier: Math.min(5, 1 + Math.floor(i / 4)),
     color: colors[i % colors.length],
+    upkeep: baseUpkeep ? Math.floor(baseUpkeep * Math.pow(1.35, i)) : 0,
   }));
 }
 
@@ -105,20 +110,20 @@ export const WEAPONS = tieredItems('w', [
   'Sawed-Off Shotgun', 'Compact SMG', 'Tactical Rifle', 'Assault Rifle', 'Combat Shotgun',
   'Long-Range Sniper', 'Dual Pistols', 'Golden Pistol', 'Plasma Cutter', 'Boss Cannon',
   'War Hammer', 'Shadow Blade', 'Empire Destroyer', 'Annihilator', 'Godfather Special',
-], 'attack', 2, 500, ['#94a3b8', '#b45309', '#64748b', '#78716c', '#475569', '#78350f', '#1e293b', '#14532d', '#166534', '#312e81', '#581c87', '#ca8a04', '#eab308', '#7f1d1d', '#450a0a', '#44403c', '#0f172a', '#991b1b', '#701a75', '#fbbf24']);
+], 'attack', 2, 500, ['#94a3b8', '#b45309', '#64748b', '#78716c', '#475569', '#78350f', '#1e293b', '#14532d', '#166534', '#312e81', '#581c87', '#ca8a04', '#eab308', '#7f1d1d', '#450a0a', '#44403c', '#0f172a', '#991b1b', '#701a75', '#fbbf24'], { baseUpkeep: 4 });
 
 export const ARMOR = tieredItems('a', [
   'Leather Jacket', 'Kevlar Vest', 'Street Helmet', 'Tactical Vest', 'Riot Gear',
   'Ballistic Suit', 'Elite Body Armor', 'Warlord Plate', 'Phantom Suit', 'Empire Guard',
   'Dragon Scale', 'Titan Plate', 'Shadow Cloak', 'Invincible Mesh', 'Emperor Mantle',
   'Fortress Shell', 'Aegis Suit', 'Void Armor', 'Immortal Guard', 'Legend Plate',
-], 'defense', 2, 800, ['#44403c', '#57534e', '#334155', '#166534', '#1e3a8a', '#374151', '#581c87', '#713f12', '#0f172a', '#991b1b', '#7c2d12', '#1e40af', '#312e81', '#134e4a', '#854d0e', '#44403c', '#0369a1', '#4c1d95', '#881337', '#fbbf24']);
+], 'defense', 2, 800, ['#44403c', '#57534e', '#334155', '#166534', '#1e3a8a', '#374151', '#581c87', '#713f12', '#0f172a', '#991b1b', '#7c2d12', '#1e40af', '#312e81', '#134e4a', '#854d0e', '#44403c', '#0369a1', '#4c1d95', '#881337', '#fbbf24'], { baseUpkeep: 6 });
 
 export const VEHICLES = tieredItems('v', [
   'Beaten Sedan', 'Muscle Car', 'Armored SUV', 'Speedboat', 'Executive Limo',
   'Private Helicopter', 'Luxury Yacht', 'Private Jet', 'Tank Limo', 'Stealth Bike',
   'War Rig', 'Submarine', 'Orbital Shuttle', 'Mobile Fortress', 'Ghost Train',
-], 'defense', 1, 2000, ['#71717a', '#dc2626', '#1f2937', '#0284c7', '#18181b', '#0369a1', '#f5f5f4', '#e2e8f0', '#422006', '#09090b', '#7f1d1d', '#164e63', '#6366f1', '#374151', '#78350f']);
+], 'defense', 1, 2000, ['#71717a', '#dc2626', '#1f2937', '#0284c7', '#18181b', '#0369a1', '#f5f5f4', '#e2e8f0', '#422006', '#09090b', '#7f1d1d', '#164e63', '#6366f1', '#374151', '#78350f'], { baseUpkeep: 20 });
 
 export const PROPERTIES = tieredItems('p', [
   'Corner Store', 'Laundromat Front', 'Pool Hall', 'Underground Club', 'Storage Warehouse',
@@ -230,8 +235,29 @@ export function getItemById(id) {
   return ALL_ITEMS.find((i) => i.id === id) || JOBS.find((j) => j.id === id) || LOCATIONS.find((l) => l.id === id) || BOSSES.find((b) => b.id === id);
 }
 
+export const ASSET_VERSION = '2.3.0';
+
 export function itemThumbnailPath(category, id) {
-  return `/assets/items/${category}_${id}.webp?v=2.2.1`;
+  return `/assets/items/${category}_${id}.webp?v=${ASSET_VERSION}`;
+}
+
+export function uiAssetPath(name) {
+  return `/assets/ui/${name}.webp?v=${ASSET_VERSION}`;
+}
+
+/** Map shop/inventory category id → catalog API key */
+export const CATALOG_KEYS = {
+  weapon: 'weapons',
+  armor: 'armor',
+  vehicle: 'vehicles',
+  property: 'properties',
+  consumable: 'consumables',
+};
+
+export function catalogItems(catalog, category) {
+  if (!catalog) return [];
+  const key = CATALOG_KEYS[category] || category;
+  return catalog[key] || [];
 }
 
 export const PROPERTY_MAX_STACK = 999;

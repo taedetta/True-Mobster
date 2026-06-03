@@ -8,7 +8,7 @@ import {
   ICE_MAX_HOURS, BAIL_COST_PER_MINUTE, SELL_BACK_RATIO, SCRATCH_CARD_COST, BANK_FEE_PERCENT,
   DAILY_GIFTS_MAX, REFERRAL_BONUS, COLLECTIONS, BOT_NAMES, BASE_STATS, STAT_GROWTH_PER_LEVEL,
   generateReferralCode, GOLD_JOB_CHANCE, PROPERTY_MAX_STACK, DEFAULT_AVATARS, avatarUrl,
-  MOB_USABLE_PER_LEVEL, getMobBracket, GOLD_STORE,
+  MOB_USABLE_PER_LEVEL, getMobBracket, GOLD_STORE, ECONOMY_TICK_MS, getItemById,
 } from '../../../shared/gameData.js';
 import db, { isPostgres } from '../db/index.js';
 import { getEffectiveMobSize, getMobAllies, getUnreadPmCount } from './chatEngine.js';
@@ -28,6 +28,50 @@ function dateStr(val) {
 function getItemBonus(itemId, list, stat) {
   const item = list.find((i) => i.id === itemId);
   return item ? (item[stat] || 0) : 0;
+}
+
+function getCatalogItem(itemId, category) {
+  const maps = { weapon: WEAPONS, armor: ARMOR, vehicle: VEHICLES, property: PROPERTIES, consumable: CONSUMABLES };
+  if (category && maps[category]) return maps[category].find((i) => i.id === itemId);
+  return getItemById(itemId);
+}
+
+export function calculateHourlyEconomy(inventory, territoryBonus = 0) {
+  let grossIncome = 0;
+  let upkeep = 0;
+  for (const row of inventory || []) {
+    const qty = Number(row.quantity || 1);
+    const item = getCatalogItem(row.item_id, row.category);
+    if (!item) continue;
+    if (row.category === 'property' && item.income) grossIncome += item.income * qty;
+    if (['weapon', 'armor', 'vehicle'].includes(row.category) && item.upkeep) upkeep += item.upkeep * qty;
+  }
+  const bonusIncome = Math.floor(grossIncome * territoryBonus);
+  return {
+    grossIncome,
+    bonusIncome,
+    upkeep,
+    netIncome: grossIncome + bonusIncome - upkeep,
+  };
+}
+
+export async function processPassiveEconomy(userId) {
+  const player = await getPlayerRow(userId);
+  const inventory = await db.all('SELECT * FROM inventory WHERE user_id=?', [userId]);
+  const territoryBonus = await getTerritoryBonusForCrew(player.crew_id);
+  const hourly = calculateHourlyEconomy(inventory, territoryBonus);
+  const lastTick = parseTime(player.last_income_collect || player.created_at);
+  const ticks = Math.floor((Date.now() - lastTick) / ECONOMY_TICK_MS);
+  if (ticks < 1) return { ...hourly, ticksProcessed: 0, incomeApplied: 0, upkeepApplied: 0 };
+
+  const cappedTicks = Math.min(ticks, 24);
+  const incomeApplied = Math.floor((hourly.grossIncome + hourly.bonusIncome) * cappedTicks);
+  const upkeepApplied = Math.floor(hourly.upkeep * cappedTicks);
+  const net = incomeApplied - upkeepApplied;
+  const newMoney = Math.max(0, player.money + net);
+  const newTick = new Date(lastTick + cappedTicks * ECONOMY_TICK_MS).toISOString();
+  await db.run('UPDATE players SET money=?, last_income_collect=? WHERE user_id=?', [newMoney, newTick, userId]);
+  return { ...hourly, ticksProcessed: cappedTicks, incomeApplied, upkeepApplied, netApplied: net };
 }
 
 function getCollectionBonus(inventory) {
@@ -411,30 +455,18 @@ export async function payBail(userId) {
 }
 
 export async function collectPropertyIncome(userId) {
-  const player = await getPlayerRow(userId);
-  const owned = await db.all('SELECT item_id FROM inventory WHERE user_id=? AND category=?', [userId, 'property']);
-  let totalIncome = 0;
-  for (const row of owned) {
-    const prop = PROPERTIES.find((p) => p.id === row.item_id);
-    if (prop) totalIncome += prop.income * Number(row.quantity || 1);
-  }
-  if (totalIncome <= 0) return { collected: 0 };
-  const hoursSince = (Date.now() - parseTime(player.last_income_collect)) / 3600000;
-  if (hoursSince < 1) throw new Error('Income available once per hour');
-  const territoryBonus = await getTerritoryBonusForCrew(player.crew_id);
-  const collected = Math.floor(totalIncome * Math.min(hoursSince, 24) * (1 + territoryBonus));
-  await db.run('UPDATE players SET money=money+?, last_income_collect=? WHERE user_id=?', [collected, nowISO(), userId]);
-  return { collected, hours: Math.floor(hoursSince) };
+  return processPassiveEconomy(userId);
 }
 
-export async function healAtHospital(userId) {
+export async function healAtHospital(userId, healAmount = null) {
   const player = await getPlayerRow(userId);
   const missing = player.max_health - player.health;
   if (missing <= 0) throw new Error('Already at full health');
-  const cost = missing * HOSPITAL_COST_PER_HP;
-  if (player.money < cost) throw new Error('Not enough money');
-  await db.run('UPDATE players SET money=money-?, health=max_health WHERE user_id=?', [cost, userId]);
-  return { cost, healed: missing };
+  const amount = healAmount ? Math.min(Math.max(1, Math.floor(healAmount)), missing) : missing;
+  const cost = amount * HOSPITAL_COST_PER_HP;
+  if (player.money < cost) throw new Error(`Not enough money — need $${cost.toLocaleString()}`);
+  await db.run('UPDATE players SET money=money-?, health=health+? WHERE user_id=?', [cost, amount, userId]);
+  return { cost, healed: amount, health: player.health + amount };
 }
 
 export async function bankDeposit(userId, amount) {
@@ -760,12 +792,30 @@ export async function getRevengeList(userId) {
 export async function getPlayerProfile(userId) {
   const player = await getPlayerRow(userId);
   if (!player) throw new Error('Player not found');
-  const inventory = await db.all('SELECT category, COUNT(*) as count FROM inventory WHERE user_id=? GROUP BY category', [userId]);
-  const combat = await getCombatStats(player, await getCrewMemberCount(player.crew_id));
+  const inventory = await db.all('SELECT * FROM inventory WHERE user_id=?', [userId]);
+  const combat = await getCombatStats(player, await getCrewMemberCount(player.crew_id), inventory);
+  const weapon = WEAPONS.find((i) => i.id === player.equipped_weapon);
+  const armor = ARMOR.find((i) => i.id === player.equipped_armor);
+  const vehicle = VEHICLES.find((i) => i.id === player.equipped_vehicle);
   return {
-    display_name: player.display_name, level: player.level, respect: player.respect,
-    wins: player.wins, losses: player.losses, kills: player.kills, mob_size: player.mob_size,
-    crew_role: player.crew_role, combat, inventory,
+    user_id: player.user_id,
+    display_name: player.display_name,
+    level: player.level,
+    respect: player.respect,
+    wins: player.wins,
+    losses: player.losses,
+    kills: player.kills,
+    mob_size: player.mob_size,
+    crew_role: player.crew_role,
+    referral_code: player.referral_code,
+    avatar_url: avatarUrl(player),
+    combat,
+    inventory,
+    equipped: {
+      weapon: weapon?.name || null,
+      armor: armor?.name || null,
+      vehicle: vehicle?.name || null,
+    },
   };
 }
 
@@ -829,6 +879,7 @@ export async function transferLeadership(leaderId, memberId) {
 }
 
 export async function buildPlayerState(userId) {
+  await processPassiveEconomy(userId);
   const player = await getPlayerRow(userId);
   if (!player) return null;
   const inventory = await db.all('SELECT * FROM inventory WHERE user_id=?', [userId]);
@@ -836,6 +887,9 @@ export async function buildPlayerState(userId) {
   const effectiveMobSize = await getEffectiveMobSize(userId, player.mob_size);
   player.effective_mob_size = effectiveMobSize;
   player.territory_bonus = await getTerritoryBonusForCrew(player.crew_id);
+  const hourly = calculateHourlyEconomy(inventory, player.territory_bonus);
+  const lastTick = parseTime(player.last_income_collect || player.created_at);
+  const nextTickAt = lastTick + ECONOMY_TICK_MS;
   const crew = player.crew_id ? await db.get('SELECT * FROM crews WHERE id=?', [player.crew_id]) : null;
   if (crew) crew.treasury = crew.bank_balance;
   const crewMembers = player.crew_id
@@ -847,7 +901,7 @@ export async function buildPlayerState(userId) {
   const missions = await getDailyMissions(userId);
   const canClaimDaily = !player.last_daily_claim || dateStr(player.last_daily_claim) !== todayStr();
   const now = Date.now();
-  const incomeHours = (now - parseTime(player.last_income_collect)) / 3600000;
+  const incomeHours = (now - lastTick) / 3600000;
   const mobBracket = getMobBracket(effectiveMobSize);
   const nextRegen = (field, max, last, sec) => {
     if (player[field] >= player[max]) return null;
@@ -867,6 +921,14 @@ export async function buildPlayerState(userId) {
     },
     incomeReady: incomeHours >= 1,
     incomeHoursAccrued: Math.floor(Math.min(incomeHours, 24)),
+    economy: {
+      grossIncome: hourly.grossIncome,
+      bonusIncome: hourly.bonusIncome,
+      upkeep: hourly.upkeep,
+      netIncome: hourly.netIncome,
+      nextTickAt,
+      minutesToTick: Math.max(0, Math.ceil((nextTickAt - now) / 60000)),
+    },
     unreadMail: Number(unreadMail?.c || 0), unreadPm,
     dailyMissions: missions, canClaimDaily,
     iced: player.iced_until && parseTime(player.iced_until) > Date.now(),

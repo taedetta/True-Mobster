@@ -127,6 +127,14 @@ export function PlayerHeader({ state }) {
 
       </div>
 
+      {state.economy && (
+        <div className="flex flex-wrap gap-2 text-[10px] border-t border-mob-border/50 pt-3 mt-1">
+          <span className="px-2 py-1 rounded-lg bg-green-900/20 text-green-400">+{formatMoney(state.economy.grossIncome || 0)}/hr</span>
+          <span className="px-2 py-1 rounded-lg bg-red-900/20 text-red-400">-{formatMoney(state.economy.upkeep || 0)}/hr upkeep</span>
+          <span className="px-2 py-1 rounded-lg bg-mob-gold/10 text-mob-gold">Net {formatMoney(state.economy.netIncome || 0)}/hr</span>
+        </div>
+      )}
+
       {state.regenAt && (
         <p className="text-[10px] text-gray-500 mt-2 text-center">
           Regen: ⚡ {formatCountdown(state.regenAt.energy) || 'full'} · 💪 {formatCountdown(state.regenAt.stamina) || 'full'} · ❤️ {formatCountdown(state.regenAt.health) || 'full'}
@@ -168,6 +176,7 @@ export function ItemCard({ item, owned, ownedQty = 0, equipped, onBuy, onEquip, 
   const canBuy = playerLevel >= item.minLevel && canAfford && (stackable || !owned);
 
   const statLabel = item.attack ? `+${item.attack} ATK` : item.defense ? `+${item.defense} DEF` : item.income ? `$${item.income}/hr` : '';
+  const upkeepLabel = item.upkeep > 0 ? `$${item.upkeep}/hr upkeep` : '';
 
 
 
@@ -189,6 +198,7 @@ export function ItemCard({ item, owned, ownedQty = 0, equipped, onBuy, onEquip, 
       <h3 className="font-semibold text-sm text-gray-100 leading-tight px-1">{item.name}</h3>
 
       <p className="text-xs text-mob-gold mt-1 font-medium">{statLabel}</p>
+      {upkeepLabel && <p className="text-xs text-red-400">{upkeepLabel}</p>}
 
       <p className="text-xs text-gray-500 mt-1">Lv.{item.minLevel}+ · {useGold && item.goldPrice ? `${item.goldPrice} gold` : formatMoney(item.price)}</p>
 

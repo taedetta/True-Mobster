@@ -40,7 +40,7 @@ router.get('/catalog', wrap(async () => {
     items.map((i) => ({ ...i, category, thumbnail: itemThumbnailPath(category, i.id) }));
   return {
     game: GAME_NAME, studio: STUDIO, locations: LOCATIONS,
-    jobs: JOBS.map((j) => ({ ...j, thumbnail: itemThumbnailPath('job', j.id) })),
+    jobs: JOBS.map((j) => ({ ...j, thumbnail: itemThumbnailPath('job', j.artSlug || j.id) })),
     weapons: enrich(WEAPONS, 'weapon'), armor: enrich(ARMOR, 'armor'),
     vehicles: enrich(VEHICLES, 'vehicle'), properties: enrich(PROPERTIES, 'property'),
     consumables: enrich(CONSUMABLES, 'consumable'),
@@ -98,7 +98,7 @@ router.post('/collect-income', wrap(async (req) => {
 }));
 
 router.post('/heal', wrap(async (req) => {
-  const result = await healAtHospital(req.userId);
+  const result = await healAtHospital(req.userId, req.body.amount);
   return { ...result, state: await buildPlayerState(req.userId) };
 }));
 
