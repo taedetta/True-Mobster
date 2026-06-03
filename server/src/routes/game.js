@@ -143,7 +143,7 @@ router.post('/mob/broadcast', wrap(async (req) => {
   return { ...result, state: await buildPlayerState(req.userId) };
 }));
 
-router.get('/jobs/mastery', wrap(async (req) => ({ mastery: await getJobMastery(req.userId) }));
+router.get('/jobs/mastery', wrap(async (req) => ({ mastery: await getJobMastery(req.userId) })));
 
 // Mob
 router.get('/mob/info', wrap(async (req) => {
