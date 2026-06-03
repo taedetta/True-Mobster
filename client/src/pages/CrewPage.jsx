@@ -18,12 +18,8 @@ export default function CrewPage() {
 
   const [donateAmount, setDonateAmount] = useState('');
 
-
-
   useEffect(() => {
-
     api('/game/crews').then(setCrews);
-
   }, [state]);
 
 
@@ -61,14 +57,9 @@ export default function CrewPage() {
 
 
   const donate = async () => {
-
     await action('/crews/donate', { amount: Number(donateAmount) }, 'Donated to crew treasury!');
-
     setDonateAmount('');
-
   };
-
-
 
   const kick = async (memberId, memberName) => {
 
@@ -133,8 +124,6 @@ export default function CrewPage() {
             </div>
 
           </div>
-
-
 
           <h3 className="font-semibold mt-4 mb-2 text-sm">Members</h3>
 

@@ -244,6 +244,39 @@ const SCHEMA = `
     PRIMARY KEY (user_id, ally_id)
   );
 
+  CREATE TABLE IF NOT EXISTS job_mastery (
+    user_id TEXT NOT NULL,
+    job_id TEXT NOT NULL,
+    completions INTEGER DEFAULT 0,
+    mastery_level INTEGER DEFAULT 0,
+    PRIMARY KEY (user_id, job_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS profile_comments (
+    id SERIAL PRIMARY KEY,
+    profile_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    author_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    body TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  CREATE TABLE IF NOT EXISTS boss_progress (
+    user_id TEXT NOT NULL,
+    boss_id TEXT NOT NULL,
+    current_hp INTEGER NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    started_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (user_id, boss_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS boss_mastery (
+    user_id TEXT NOT NULL,
+    boss_id TEXT NOT NULL,
+    kill_count INTEGER DEFAULT 0,
+    PRIMARY KEY (user_id, boss_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_profile_comments ON profile_comments(profile_user_id, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_chat_channel ON chat_messages(channel, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_hitlist_target ON hitlist(target_id, claimed);
   CREATE INDEX IF NOT EXISTS idx_combat_attacker ON combat_log(attacker_id);
@@ -291,6 +324,19 @@ export async function initDatabase() {
         "ALTER TABLE players ADD COLUMN IF NOT EXISTS avatar_id TEXT DEFAULT 'default_01'",
         'ALTER TABLE players ADD COLUMN IF NOT EXISTS avatar_custom TEXT',
         'ALTER TABLE combat_log ADD COLUMN IF NOT EXISTS fight_details TEXT',
+        `CREATE TABLE IF NOT EXISTS job_mastery (
+          user_id TEXT NOT NULL, job_id TEXT NOT NULL, completions INTEGER DEFAULT 0,
+          mastery_level INTEGER DEFAULT 0, PRIMARY KEY (user_id, job_id))`,
+        `CREATE TABLE IF NOT EXISTS profile_comments (
+          id SERIAL PRIMARY KEY, profile_user_id TEXT NOT NULL, author_id TEXT NOT NULL,
+          body TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW())`,
+        `CREATE TABLE IF NOT EXISTS boss_progress (
+          user_id TEXT NOT NULL, boss_id TEXT NOT NULL, current_hp INTEGER NOT NULL,
+          expires_at TIMESTAMPTZ NOT NULL, started_at TIMESTAMPTZ DEFAULT NOW(),
+          PRIMARY KEY (user_id, boss_id))`,
+        `CREATE TABLE IF NOT EXISTS boss_mastery (
+          user_id TEXT NOT NULL, boss_id TEXT NOT NULL, kill_count INTEGER DEFAULT 0,
+          PRIMARY KEY (user_id, boss_id))`,
       ];
       for (const m of pgMigrations) {
         try { await client.query(m); } catch { /* */ }
@@ -334,6 +380,19 @@ export async function initDatabase() {
     'ALTER TABLE combat_log ADD COLUMN fight_details TEXT',
     "ALTER TABLE players ADD COLUMN avatar_id TEXT DEFAULT 'default_01'",
     'ALTER TABLE players ADD COLUMN avatar_custom TEXT',
+    `CREATE TABLE IF NOT EXISTS job_mastery (
+      user_id TEXT NOT NULL, job_id TEXT NOT NULL, completions INTEGER DEFAULT 0,
+      mastery_level INTEGER DEFAULT 0, PRIMARY KEY (user_id, job_id))`,
+    `CREATE TABLE IF NOT EXISTS profile_comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, profile_user_id TEXT NOT NULL, author_id TEXT NOT NULL,
+      body TEXT NOT NULL, created_at TEXT DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS boss_progress (
+      user_id TEXT NOT NULL, boss_id TEXT NOT NULL, current_hp INTEGER NOT NULL,
+      expires_at TEXT NOT NULL, started_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, boss_id))`,
+    `CREATE TABLE IF NOT EXISTS boss_mastery (
+      user_id TEXT NOT NULL, boss_id TEXT NOT NULL, kill_count INTEGER DEFAULT 0,
+      PRIMARY KEY (user_id, boss_id))`,
   ];
   for (const m of migrations) {
     try { sqliteDb.exec(m); } catch { /* column exists */ }

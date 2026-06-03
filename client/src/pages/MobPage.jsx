@@ -10,6 +10,7 @@ export default function MobPage() {
   const [allyCode, setAllyCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [broadcastMsg, setBroadcastMsg] = useState('');
 
   const refresh = () => {
     gameGet('/mob/info').then(setInfo).catch(() => {});
@@ -55,14 +56,39 @@ export default function MobPage() {
   const bonus = info?.bonus ?? state.combat?.mobBonus ?? 0;
   const cost = info?.nextCost ?? info?.recruitCost;
   const myCode = info?.referralCode || state.referralCode;
+  const bracket = state.mob_bracket;
+
+  const sendBroadcast = async () => {
+    if (!broadcastMsg.trim()) return;
+    await action('/mob/broadcast', { message: broadcastMsg.trim() }, 'Broadcast sent to mob allies!');
+    setBroadcastMsg('');
+  };
 
   return (
     <div className="space-y-4">
-      <div className="card bg-gradient-to-br from-purple-900/20 to-mob-card">
+      <div className="card bg-gradient-to-br from-red-950/30 to-mob-card">
         <h2 className="font-display text-lg text-mob-gold mb-2">Your Mob</h2>
         <p className="text-3xl font-bold">{mobSize} <span className="text-sm text-gray-400 font-normal">recruited</span></p>
         <p className="text-lg text-mob-gold mt-1">{effective} <span className="text-sm text-gray-400 font-normal">effective (with allies)</span></p>
         <p className="text-sm text-gray-400 mt-2">+{Math.round((bonus || 0) * 100)}% combat bonus</p>
+        {bracket && (
+          <p className="text-xs text-mob-gold mt-2">Fight bracket: {bracket.min}–{bracket.max} mob · Usable in fight: {state.usable_mob_in_fight}</p>
+        )}
+      </div>
+
+      <div className="card">
+        <h3 className="font-semibold text-sm mb-2">Broadcast to Mob</h3>
+        <p className="text-[10px] text-gray-500 mb-2">Send a message to all your mob allies (appears in News & Mail)</p>
+        <textarea
+          className="w-full px-3 py-2 rounded-lg bg-mob-bg border border-mob-border text-sm mb-2 min-h-[60px]"
+          placeholder="Request backup, share codes..."
+          maxLength={280}
+          value={broadcastMsg}
+          onChange={(e) => setBroadcastMsg(e.target.value)}
+        />
+        <button type="button" className="btn-primary w-full text-sm" disabled={broadcastMsg.trim().length < 3} onClick={sendBroadcast}>
+          Broadcast
+        </button>
       </div>
 
       <div className="card">

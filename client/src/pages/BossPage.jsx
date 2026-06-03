@@ -1,151 +1,93 @@
 import { useState, useEffect } from 'react';
-
 import { useGame } from '../context/GameContext';
-
 import { formatMoney } from '../api';
-
 import ItemImage from '../components/ItemImage';
 
-
+function formatCountdown(iso) {
+  if (!iso) return '';
+  const sec = Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 1000));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m ${sec % 60}s`;
+}
 
 export default function BossPage() {
-
   const { state, action, gameGet } = useGame();
-
   const [bosses, setBosses] = useState([]);
-
   const [busy, setBusy] = useState(null);
-
-
+  const [, setTick] = useState(0);
 
   useEffect(() => {
-
     gameGet('/meta/bosses').then((data) => setBosses(data.bosses || data || [])).catch(() => {});
-
   }, [state?.user_id, gameGet]);
 
+  useEffect(() => {
+    const t = setInterval(() => setTick((x) => x + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
 
-
-  const fightBoss = async (bossId, name) => {
-
+  const fightBoss = async (bossId) => {
     setBusy(bossId);
-
     try {
-
-      const result = await action('/meta/boss/fight', { bossId });
-
-      if (result?.won) {
-
-        gameGet('/meta/bosses').then((data) => setBosses(data.bosses || data || []));
-
-      }
-
+      await action('/meta/boss/fight', { bossId });
+      gameGet('/meta/bosses').then((data) => setBosses(data.bosses || data || []));
     } catch { /* handled */ }
-
     setBusy(null);
-
   };
-
-
 
   if (!state) return null;
 
-
-
   return (
-
     <div className="space-y-4">
-
       <h2 className="font-display text-lg text-mob-gold">Boss Fights</h2>
-
-      <p className="text-xs text-gray-400">One win per boss per day. High-risk battles for big rewards.</p>
-
-
+      <p className="text-xs text-gray-400">Attack bosses with stamina until their HP hits zero. Timed fight window like iMobsters.</p>
 
       <div className="space-y-3">
-
-        {bosses.length === 0 && (
-
-          <p className="text-gray-500 text-sm text-center py-8">Loading bosses...</p>
-
-        )}
-
-        {bosses.map((b) => (
-
-          <div key={b.id} className="card" style={{ borderColor: b.color ? `${b.color}40` : undefined }}>
-
-            <div className="flex gap-3 items-start">
-
-              {b.thumbnail && <ItemImage src={b.thumbnail} alt={b.name} size="list" eager />}
-
-              <div className="flex-1">
-
-                <div className="flex justify-between items-start gap-2">
-
-                  <div>
-
-                    <h3 className="font-semibold text-mob-gold">{b.name}</h3>
-
-                    <p className="text-xs text-gray-400 mt-1">Lv.{b.minLevel}+ · Tier {b.tier}</p>
-
-                    <p className="text-xs text-red-400 mt-1">HP {b.hp} · ATK {b.attack} · DEF {b.defense}</p>
-
-                    <p className="text-xs text-green-400 mt-1">
-
-                      {formatMoney(b.money?.[0] || 0)}-{formatMoney(b.money?.[1] || 0)} · +{b.xp} XP · +{b.respect} resp
-
-                    </p>
-
-                  </div>
-
-                  <div className="text-right text-xs text-gray-500">
-
-                    <p>💪 {b.stamina} stamina</p>
-
-                    {b.defeatedToday && <p className="text-green-400">Defeated today</p>}
-
-                  </div>
-
+        {bosses.map((b) => {
+          const prog = b.progress;
+          const hpPct = prog ? Math.round((prog.currentHp / prog.maxHp) * 100) : 100;
+          return (
+            <div key={b.id} className="card border-red-900/40">
+              <div className="flex gap-3 items-start">
+                {b.thumbnail && <ItemImage src={b.thumbnail} alt={b.name} size="list" eager />}
+                <div className="flex-1">
+                  <h3 className="font-semibold text-mob-gold">{b.name}</h3>
+                  <p className="text-xs text-gray-400">Lv.{b.minLevel}+ · Mastery {b.masteryKills || 0}/{10}</p>
+                  {inFight(prog) && (
+                    <div className="mt-3">
+                      <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+                        <span>HP {prog.currentHp}/{prog.maxHp}</span>
+                        <span>⏱ {formatCountdown(prog.expiresAt)}</span>
+                      </div>
+                      <div className="stat-bar h-2">
+                        <div className="stat-fill-health h-2" style={{ width: `${hpPct}%` }} />
+                      </div>
+                    </div>
+                  )}
+                  {!prog && !b.defeatedToday && (
+                    <p className="text-xs text-red-400 mt-2">HP {b.hp} · 💪 {b.stamina} per attack</p>
+                  )}
+                  {b.defeatedToday && <p className="text-xs text-green-500 mt-2">Defeated today</p>}
+                  {!b.defeatedToday && (
+                    <button
+                      type="button"
+                      className="btn-danger w-full mt-3 text-sm"
+                      disabled={state.level < b.minLevel || state.stamina < (b.stamina || 1) || busy === b.id}
+                      onClick={() => fightBoss(b.id)}
+                    >
+                      {busy === b.id ? 'Attacking...' : `Attack Boss (${b.stamina} stamina)`}
+                    </button>
+                  )}
                 </div>
-
-                <button
-
-                  className="btn-danger w-full mt-3 text-sm"
-
-                  disabled={
-
-                    state.level < b.minLevel ||
-
-                    state.stamina < (b.stamina || 1) ||
-
-                    busy === b.id ||
-
-                    b.defeatedToday
-
-                  }
-
-                  onClick={() => fightBoss(b.id, b.name)}
-
-                >
-
-                  {busy === b.id ? 'Fighting...' : state.level < b.minLevel ? `Need Lv.${b.minLevel}` : b.defeatedToday ? 'Come back tomorrow' : 'Fight Boss'}
-
-                </button>
-
               </div>
-
             </div>
-
-          </div>
-
-        ))}
-
+          );
+        })}
       </div>
-
     </div>
-
   );
-
 }
 
-
+function inFight(prog) {
+  return prog && new Date(prog.expiresAt).getTime() > Date.now();
+}

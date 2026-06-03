@@ -13,6 +13,7 @@ export default function HospitalPage() {
   if (!state) return null;
 
   const missing = state.max_health - state.health;
+  const belowThreshold = state.health / state.max_health < 0.6;
   const fullCost = missing * COST_PER_HP;
   const selectedHeal = healAmount ?? missing;
   const selectedCost = selectedHeal * COST_PER_HP;
@@ -28,7 +29,7 @@ export default function HospitalPage() {
         <img src={uiAsset('hospital')} alt="" className="w-16 h-16 rounded-xl object-cover bg-mob-bg border border-mob-border" />
         <div>
           <h2 className="font-display text-lg text-mob-gold">Hospital</h2>
-          <p className="text-xs text-gray-400">Pay the doc to patch you up — ${COST_PER_HP}/HP</p>
+          <p className="text-xs text-gray-400">ER available below 60% HP — ${COST_PER_HP}/HP · or use Godfather favor</p>
         </div>
       </div>
 
@@ -46,6 +47,10 @@ export default function HospitalPage() {
 
         {missing <= 0 ? (
           <p className="text-center text-green-400 py-6">You&apos;re at full health. Get back out there, boss.</p>
+        ) : !belowThreshold ? (
+          <p className="text-center text-amber-400 py-6 text-sm">
+            Hospital only treats you below 60% HP. Wait for regen or visit <Link to="/godfather" className="text-red-300 underline">The Godfather</Link> for instant heal.
+          </p>
         ) : (
           <>
             <div className="space-y-2 mb-4">
@@ -90,7 +95,7 @@ export default function HospitalPage() {
         )}
       </div>
 
-      <Link to="/" className="btn-secondary w-full text-sm text-center block">← Back to Godfather</Link>
+      <Link to="/safehouse" className="btn-secondary w-full text-sm text-center block">← Safehouse</Link>
     </div>
   );
 }

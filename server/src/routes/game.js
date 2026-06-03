@@ -9,9 +9,10 @@ import {
   recruitMob, buyIce, payBail, claimDailyLogin, getDailyMissions, claimMission,
   getAchievements, claimAchievement, scratchCard, fightBoss,
   addFriend, removeFriend, getFriends, sendGift, getGifts, claimGifts,
-  getMail, readMail, readAllMail, getNews, getRevengeList, getPlayerProfile,
-  getTerritories, declareTerritoryWar, donateToCrew, kickCrewMember, transferLeadership,
+  getMail, readMail, readAllMail, getNews, getRevengeList, getExecuteList, getPlayerProfile,
+  getTerritories, declareTerritoryWar, donateToCrew, spendCrewTreasury, kickCrewMember, transferLeadership,
   updateAvatar, updateCustomAvatar, buyGodfatherItem, buyGoldStoreItem, getCollectionProgress, getBossList,
+  getJobMastery, broadcastToMob, getProfileComments, addProfileComment,
 } from '../services/gameEngine.js';
 import {
   sendChatMessage, getChatMessages, sendPrivateMessage, getPrivateMessages,
@@ -22,6 +23,7 @@ import {
   ACHIEVEMENTS, DAILY_MISSIONS, DAILY_LOGIN_REWARDS, TERRITORIES, FIGHT_TYPES,
   itemThumbnailPath, GAME_NAME, STUDIO, MOB_RECRUIT_COST, MOB_MAX_SIZE, DEFAULT_AVATARS,
   COLLECTIONS, GODFATHER_STORE, GOLD_STORE, MOB_USABLE_PER_LEVEL, getMobBracket,
+  CREW_SPEND_OPTIONS, MISSION_MASTERY_THRESHOLDS, BANK_FEE_PERCENT,
 } from '../../../shared/gameData.js';
 
 const router = Router();
@@ -66,11 +68,12 @@ router.post('/job', wrap(async (req) => {
 }));
 
 router.post('/fight', wrap(async (req) => {
-  const result = await resolveFight(req.userId, req.body.targetId, req.body.fightType || 'fight');
+  const result = await resolveFight(req.userId, req.body.targetId);
   return { ...result, state: await buildPlayerState(req.userId) };
 }));
 
 router.get('/fight-list', wrap(async (req) => getFightList(req.userId)));
+router.get('/execute-list', wrap(async (req) => getExecuteList(req.userId)));
 router.get('/revenge', wrap(async (req) => getRevengeList(req.userId)));
 
 router.post('/buy', wrap(async (req) => {
@@ -127,6 +130,20 @@ router.post('/skill', wrap(async (req) => {
 router.get('/leaderboard', wrap(async () => getLeaderboard()));
 router.get('/combat-history', wrap(async (req) => getCombatHistory(req.userId)));
 router.get('/player/:userId', wrap(async (req) => getPlayerProfile(req.params.userId)));
+router.get('/player/:userId/comments', wrap(async (req) => ({
+  comments: await getProfileComments(req.params.userId),
+})));
+router.post('/player/:userId/comments', wrap(async (req) => {
+  await addProfileComment(req.userId, req.params.userId, req.body.body);
+  return { comments: await getProfileComments(req.params.userId) };
+}));
+
+router.post('/mob/broadcast', wrap(async (req) => {
+  const result = await broadcastToMob(req.userId, req.body.message);
+  return { ...result, state: await buildPlayerState(req.userId) };
+}));
+
+router.get('/jobs/mastery', wrap(async (req) => ({ mastery: await getJobMastery(req.userId) }));
 
 // Mob
 router.get('/mob/info', wrap(async (req) => {
@@ -321,6 +338,11 @@ router.post('/crews/donate', wrap(async (req) => {
   const result = await donateToCrew(req.userId, req.body.amount);
   return { ...result, state: await buildPlayerState(req.userId) };
 }));
+router.post('/crews/spend', wrap(async (req) => {
+  const result = await spendCrewTreasury(req.userId, req.body.spendId);
+  return { ...result, state: await buildPlayerState(req.userId) };
+}));
+router.get('/crews/spend-options', wrap(async () => ({ options: CREW_SPEND_OPTIONS })));
 router.post('/crews/kick', wrap(async (req) => {
   await kickCrewMember(req.userId, req.body.memberId);
   return { state: await buildPlayerState(req.userId) };

@@ -4,14 +4,21 @@ import ItemImage from './ItemImage';
 import { useGame } from '../context/GameContext';
 import { useState } from 'react';
 
-function formatCountdown(isoOrMs) {
+function formatIncomeTimer(nextTickAt) {
+  if (!nextTickAt) return '--:--';
+  const sec = Math.max(0, Math.ceil((new Date(nextTickAt).getTime() - Date.now()) / 1000));
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function formatRegenTimer(isoOrMs) {
   if (!isoOrMs) return null;
   const t = typeof isoOrMs === 'number' ? isoOrMs : new Date(isoOrMs).getTime();
   const sec = Math.max(0, Math.ceil((t - Date.now()) / 1000));
-  if (sec <= 0) return 'now';
   const m = Math.floor(sec / 60);
   const s = sec % 60;
-  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
 
@@ -60,15 +67,17 @@ export function StatBar({ label, current, max, type = 'energy', icon }) {
 
 
 
-export function PlayerHeader({ state }) {
-
+export function ImobstersHud({ state }) {
   if (!state) return null;
   const { action } = useGame();
   const [bailing, setBailing] = useState(false);
-  const xpPct = state.xpNeeded > 0 ? (state.xp / state.xpNeeded) * 100 : 0;
+  const eco = state.economy || {};
+  const net = eco.netIncome || 0;
+  const xpPct = state.xpNeeded > 0 ? Math.min(100, (state.xp / state.xpNeeded) * 100) : 0;
   const inJail = state.in_jail_until && new Date(state.in_jail_until) > new Date();
   const bailMinutes = inJail ? Math.ceil((new Date(state.in_jail_until) - Date.now()) / 60000) : 0;
   const bailCost = bailMinutes * 50;
+  const favor = state.favor_points ?? state.gold ?? 0;
 
   const payBail = async () => {
     setBailing(true);
@@ -78,115 +87,87 @@ export function PlayerHeader({ state }) {
     setBailing(false);
   };
 
+  const cashflowSign = net >= 0 ? '+' : '';
+  const cashflowColor = net >= 0 ? 'text-green-400' : 'text-red-400';
+
   return (
-
-    <div className="card-premium mb-5 animate-fade-up">
-
-      <div className="flex items-start justify-between mb-4 gap-3">
-
-        <div className="flex items-center gap-3 min-w-0">
-
-          <img src={state.avatar_url || '/assets/avatars/default_01.svg'} alt="" className="w-12 h-12 rounded-full border border-mob-gold/50 object-cover bg-mob-bg flex-shrink-0" />
-
-          <div className="min-w-0">
-
-            <h1 className="font-display text-xl text-mob-gold tracking-wide truncate">{state.display_name}</h1>
-
-            <p className="text-sm text-gray-400 mt-0.5">Level {state.level} · {state.respect.toLocaleString()} Respect</p>
-
+    <div className="imob-hud">
+      <div className="imob-hud-top">
+        <div>
+          <p className="imob-cash">{formatMoney(state.money)}</p>
+          <p className={`imob-cashflow ${cashflowColor}`}>
+            {cashflowSign}{formatMoney(Math.abs(net))} in {formatIncomeTimer(eco.nextTickAt)}
+          </p>
+        </div>
+        <div className="imob-exp-block">
+          <div className="flex items-center gap-2 justify-end">
+            <span className="text-[10px] text-yellow-400/90">Exp: {state.xp}/{state.xpNeeded}</span>
+            <span className="imob-level">{state.level}</span>
           </div>
-
+          <div className="imob-exp-bar mt-1">
+            <div className="imob-exp-fill" style={{ width: `${xpPct}%` }} />
+          </div>
         </div>
-
-        <div className="text-right">
-
-          <p className="text-xl font-bold text-green-400 tabular-nums">{formatMoney(state.money)}</p>
-
-          <p className="text-xs text-gray-500 mt-0.5">Bank: {formatMoney(state.bank_balance)}</p>
-
-          {(state.favor_points || state.gold || 0) > 0 && <p className="text-xs text-purple-300">{state.favor_points ?? state.gold} Favor</p>}
-
-        </div>
-
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
-
-        <StatBar label="Energy" current={state.energy} max={state.max_energy} type="energy" icon="⚡" />
-
-        <StatBar label="Stamina" current={state.stamina} max={state.max_stamina} type="stamina" icon="💪" />
-
-        <StatBar label="Health" current={state.health} max={state.max_health} type="health" icon="❤️" />
-
-        <StatBar label="XP" current={state.xp} max={state.xpNeeded} type="xp" icon="⭐" />
-
-      </div>
-
-      <div className="flex flex-wrap gap-4 text-xs text-gray-400 border-t border-mob-border/50 pt-3">
-
-        <span className="px-2 py-1 rounded-lg bg-mob-bg/50">⚔ ATK {state.combat?.attack || 0}</span>
-
-        <span className="px-2 py-1 rounded-lg bg-mob-bg/50">🛡 DEF {state.combat?.defense || 0}</span>
-
-        <span className="px-2 py-1 rounded-lg bg-mob-bg/50">👥 Mob {state.usable_mob_in_fight || state.effective_mob_size || state.mob_size}</span>
-
-        <span className="px-2 py-1 rounded-lg bg-mob-bg/50">🏆 {state.wins}W / {state.losses}L</span>
-
-        {state.skill_points > 0 && (
-
-          <span className="text-mob-gold animate-pulse px-2 py-1 rounded-lg bg-mob-gold/10">+{state.skill_points} skill pts</span>
-
-        )}
-
-      </div>
-
-      {state.economy && (
-        <div className="flex flex-wrap gap-2 text-[10px] border-t border-mob-border/50 pt-3 mt-1">
-          <span className="px-2 py-1 rounded-lg bg-green-900/20 text-green-400">+{formatMoney(state.economy.grossIncome || 0)}/hr</span>
-          <span className="px-2 py-1 rounded-lg bg-red-900/20 text-red-400">-{formatMoney(state.economy.upkeep || 0)}/hr upkeep</span>
-          <span className="px-2 py-1 rounded-lg bg-mob-gold/10 text-mob-gold">Net {formatMoney(state.economy.netIncome || 0)}/hr</span>
+      <div className="imob-stat-row">
+        <div className="imob-stat">
+          <span className="imob-stat-icon text-red-400">❤</span>
+          <span className="imob-stat-val">{state.health} / {state.max_health}</span>
+          <span className="imob-stat-timer">{formatRegenTimer(state.regenAt?.health) || ''}</span>
         </div>
-      )}
+        <div className="imob-stat">
+          <span className="imob-stat-icon text-blue-400">⚡</span>
+          <span className="imob-stat-val">{state.energy} / {state.max_energy}</span>
+          <span className="imob-stat-timer">{formatRegenTimer(state.regenAt?.energy) || ''}</span>
+        </div>
+        <div className="imob-stat">
+          <span className="imob-stat-icon text-amber-600">🔨</span>
+          <span className="imob-stat-val">{state.stamina} / {state.max_stamina}</span>
+          <span className="imob-stat-timer">{formatRegenTimer(state.regenAt?.stamina) || ''}</span>
+        </div>
+      </div>
 
-      {state.regenAt && (
-        <p className="text-[10px] text-gray-500 mt-2 text-center">
-          Regen: ⚡ {formatCountdown(state.regenAt.energy) || 'full'} · 💪 {formatCountdown(state.regenAt.stamina) || 'full'} · ❤️ {formatCountdown(state.regenAt.health) || 'full'}
-        </p>
+      {net < 0 && (
+        <div className="imob-warning">
+          <p className="text-red-500 font-bold text-sm">Warning!</p>
+          <p className="text-xs text-gray-300 mt-1">
+            You currently have a negative cashflow. If you run out of cash, your equipment with upkeep will automatically be sold until you are out of debt.
+          </p>
+        </div>
       )}
 
       {(state.unreadMail > 0) && (
-        <Link to="/mail" className="mt-3 block p-2 rounded-lg bg-red-900/20 border border-red-800/40 text-center text-xs text-red-300 hover:border-red-600/50">
-          ⚔ {state.unreadMail} unread combat mail — tap to view offline attacks
+        <Link to="/mail" className="block mt-2 p-2 rounded border border-red-800/50 bg-red-950/30 text-center text-xs text-red-300">
+          ⚔ {state.unreadMail} unread combat mail
         </Link>
       )}
 
       {inJail && (
-
-        <div className="mt-3 p-3 bg-red-900/30 border border-red-800/50 rounded-xl text-sm text-red-300 text-center space-y-2">
-
+        <div className="mt-2 p-2 bg-red-950/40 border border-red-800/50 rounded text-xs text-red-300 text-center space-y-2">
           <p>🔒 In jail until {new Date(state.in_jail_until).toLocaleTimeString()}</p>
           <button type="button" className="btn-primary text-xs w-full" disabled={bailing || state.money < bailCost} onClick={payBail}>
             {bailing ? 'Paying...' : `Pay Bail $${bailCost.toLocaleString()}`}
           </button>
-
         </div>
-
       )}
 
       {state.iced_until && new Date(state.iced_until) > new Date() && (
-
-        <div className="mt-3 p-3 bg-cyan-900/20 border border-cyan-700/50 rounded-xl text-sm text-cyan-300 text-center">
-
-          🧊 Iced (protected) until {new Date(state.iced_until).toLocaleTimeString()}
-
+        <div className="mt-2 p-2 bg-red-950/30 border border-red-800/40 rounded text-xs text-red-300 text-center">
+          Ice protection until {new Date(state.iced_until).toLocaleTimeString()}
         </div>
-
       )}
 
+      {favor > 0 && (
+        <p className="text-[10px] text-center text-red-300/80 mt-1">{favor} Favor Points</p>
+      )}
     </div>
-
   );
+}
 
+/** @deprecated alias */
+export function PlayerHeader({ state }) {
+  return <ImobstersHud state={state} />;
 }
 
 
@@ -299,7 +280,7 @@ export function LoadingScreen() {
 
       <div className="text-6xl animate-pulse drop-shadow-lg">🎩</div>
 
-      <h2 className="font-display text-3xl text-mob-gold tracking-wider">True Mobsters</h2>
+      <h2 className="font-display text-3xl text-mob-gold tracking-wider">iMobsters</h2>
 
       <p className="text-gray-500 text-sm font-medium">VisionIt Studio</p>
 

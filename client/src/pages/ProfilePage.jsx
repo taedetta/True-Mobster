@@ -1,17 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
-import { useGame } from '../context/GameContext';
-import { api, formatMoney } from '../api';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useGame } from '../context/GameContext';import { api, formatMoney } from '../api';
 
 const SKILLS = [
-  { stat: 'attack_skill', label: 'Attack', icon: '⚔️' },
-  { stat: 'defense_skill', label: 'Defense', icon: '🛡' },
-  { stat: 'energy_skill', label: 'Energy', icon: '⚡' },
-  { stat: 'stamina_skill', label: 'Stamina', icon: '💪' },
-  { stat: 'health_skill', label: 'Health', icon: '❤️' },
+  { stat: 'attack_skill', label: 'Attack', icon: '⚔️', cost: 1 },
+  { stat: 'defense_skill', label: 'Defense', icon: '🛡', cost: 1 },
+  { stat: 'energy_skill', label: 'Energy', icon: '⚡', cost: 1 },
+  { stat: 'stamina_skill', label: 'Stamina', icon: '💪', cost: 2 },
+  { stat: 'health_skill', label: 'Health', icon: '❤️', cost: 1 },
 ];
 
 export default function ProfilePage() {
   const { state, action, showMessage } = useGame();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [leaderboard, setLeaderboard] = useState([]);
   const [bankAmount, setBankAmount] = useState('');
   const [copied, setCopied] = useState(false);
@@ -88,17 +91,17 @@ export default function ProfilePage() {
           <h3 className="font-semibold text-mob-gold mb-2">Skill Points ({state.skill_points})</h3>
           <div className="grid grid-cols-2 gap-2">
             {SKILLS.map((s) => (
-              <button key={s.stat} type="button" className="btn-secondary text-xs" onClick={() => action('/skill', { stat: s.stat }, 'Skill point allocated!')}>
-                {s.icon} +1 {s.label}
+              <button key={s.stat} type="button" className="btn-secondary text-xs" disabled={state.skill_points < s.cost} onClick={() => action('/skill', { stat: s.stat }, 'Skill point allocated!')}>
+                {s.icon} +1 {s.label} ({s.cost}pt)
               </button>
             ))}
           </div>
         </div>
       )}
 
-      <div className="card">
-        <h3 className="font-semibold mb-3">🏦 Bank</h3>
-        <p className="text-sm text-gray-400 mb-2">Cash: {formatMoney(state.money)} · Bank: {formatMoney(state.bank_balance)}</p>
+      <div className="card" id="bank">
+        <h3 className="font-semibold mb-3">🏦 Bank</h3>        <p className="text-sm text-gray-400 mb-2">Cash: {formatMoney(state.money)} · Bank: {formatMoney(state.bank_balance)}</p>
+        <p className="text-[10px] text-amber-400/80 mb-2">10% deposit fee (iMobsters-style) — protects cash from thieves</p>
         <input type="number" className="w-full px-3 py-2 rounded-lg bg-mob-bg border border-mob-border mb-2 text-sm" placeholder="Amount" value={bankAmount} onChange={(e) => setBankAmount(e.target.value)} />
         <div className="grid grid-cols-2 gap-2">
           <button type="button" className="btn-primary text-xs" onClick={() => action('/bank/deposit', { amount: Number(bankAmount) }, 'Deposited!')}>Deposit</button>
@@ -117,10 +120,17 @@ export default function ProfilePage() {
           ))}
         </div>
       </div>
+
+      <button
+        type="button"
+        className="btn-secondary w-full text-sm text-red-400"
+        onClick={() => { logout(); navigate('/login'); }}
+      >
+        Logout
+      </button>
     </div>
   );
 }
-
 function catalogAvatars(state) {
   return Array.from({ length: 15 }, (_, i) => ({
     id: `default_${String(i + 1).padStart(2, '0')}`,

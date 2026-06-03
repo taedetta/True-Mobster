@@ -3,16 +3,24 @@
 export const STUDIO = 'VisionIt';
 export const GAME_NAME = 'True Mobsters';
 
-export const REGEN = { energySeconds: 300, staminaSeconds: 180, healthSeconds: 600 };
+export const REGEN = { energySeconds: 165, staminaSeconds: 165, healthSeconds: 165 };
 export const LEVEL_XP = (level) => Math.floor(100 * Math.pow(level, 1.85));
 export const BASE_STATS = { maxEnergy: 10, maxStamina: 5, maxHealth: 100, attack: 1, defense: 1 };
 export const STAT_GROWTH_PER_LEVEL = { maxEnergy: 2, maxStamina: 1, maxHealth: 10 };
+export const SKILL_POINTS_PER_LEVEL = 3;
 
 export const HOSPITAL_COST_PER_HP = 10;
-/** iMobsters-style passive economy tick (minutes) */
+export const HOSPITAL_HEAL_THRESHOLD = 0.6;
+/** iMobsters: property income auto-deposits every ~60 minutes */
 export const ECONOMY_TICK_MINUTES = 60;
 export const ECONOMY_TICK_MS = ECONOMY_TICK_MINUTES * 60 * 1000;
-export const BANK_FEE_PERCENT = 0;
+export const BANK_FEE_PERCENT = 0.10;
+export const MISSION_MASTERY_THRESHOLDS = [10, 25, 50, 100];
+export const MISSION_MASTERY_MAX = 4;
+export const BOSS_FIGHT_HOURS = 2;
+export const BOSS_MASTERY_KILLS = 10;
+export const EXECUTE_BASE_SUCCESS = 0.7;
+export const STAMINA_SKILL_COST = 2;
 export const HITLIST_MIN_BOUNTY = 1000;
 export const HITLIST_FEE_PERCENT = 0.1;
 export const HITLIST_BONUS_MULTIPLIER = 1.5;
@@ -37,14 +45,13 @@ export const FAVOR_JOB_CHANCE = GOLD_JOB_CHANCE;
 export const DAILY_GIFTS_MAX = 10;
 export const REFERRAL_BONUS = 5000;
 
+/** Original iMobsters — single Attack action (no slap/fight/execute menu) */
+export const DEFAULT_FIGHT_TYPE = 'attack';
 export const FIGHT_TYPES = {
-  slap: { stamina: 1, xpWin: 8, xpLose: 3, money: [25, 100], respect: 1, damage: [5, 15], label: 'Slap' },
-  fight: { stamina: 1, xpWin: 15, xpLose: 5, money: [100, 500], respect: 2, damage: [10, 30], label: 'Fight' },
-  execute: { stamina: 2, xpWin: 30, xpLose: 8, money: [300, 1200], respect: 5, damage: [25, 50], killChance: 0.15, label: 'Execute' },
+  attack: { stamina: 1, xpWin: 15, xpLose: 5, money: [100, 500], respect: 2, damage: [10, 30], label: 'Attack' },
 };
 
-/** iMobsters-style gear loss on fight defeat (% of gear used in that fight) */
-export const FIGHT_GEAR_LOSS_RATE = { slap: 0.05, fight: 0.1, execute: 0.2 };
+export const FIGHT_GEAR_LOSS_RATE = 0.1;
 
 export const LOCATIONS = [
   { id: 'downtown', name: 'Downtown', minLevel: 1, color: '#6366f1', city: 'Metro City' },
@@ -82,18 +89,45 @@ const JOB_TEMPLATES = [
   ['syndicate_hit', 'Syndicate Hit', 10, [4000, 7000], 190, 0.3, 35],
 ];
 
+const JOB_REQUIREMENTS = {
+  pickpocket: { minMob: 1, items: [] },
+  mug_runners: { minMob: 2, items: [{ itemId: 'w_rusty_knife', category: 'weapon', qty: 1 }] },
+  fence_goods: { minMob: 3, items: [{ itemId: 'w_baseball_bat', category: 'weapon', qty: 1 }] },
+  extortion: { minMob: 4, items: [{ itemId: 'w_switchblade', category: 'weapon', qty: 1 }] },
+  warehouse: { minMob: 5, items: [{ itemId: 'a_leather_jacket', category: 'armor', qty: 1 }] },
+  truck_jack: { minMob: 6, items: [{ itemId: 'v_beaten_sedan', category: 'vehicle', qty: 1 }] },
+  dock_smuggle: { minMob: 8, items: [{ itemId: 'w_street_revolver', category: 'weapon', qty: 1 }] },
+  counterfeit: { minMob: 10, items: [{ itemId: 'a_kevlar_vest', category: 'armor', qty: 1 }] },
+  nightclub: { minMob: 12, items: [{ itemId: 'v_muscle_car', category: 'vehicle', qty: 1 }] },
+  insider_trade: { minMob: 15, items: [{ itemId: 'w_brass_knuckles', category: 'weapon', qty: 1 }] },
+  casino_scam: { minMob: 18, items: [{ itemId: 'w_compact_smg', category: 'weapon', qty: 1 }] },
+  art_heist: { minMob: 20, items: [{ itemId: 'a_tactical_vest', category: 'armor', qty: 1 }] },
+  penthouse: { minMob: 25, items: [{ itemId: 'v_armored_suv', category: 'vehicle', qty: 1 }] },
+  bank_job: { minMob: 30, items: [{ itemId: 'w_tactical_rifle', category: 'weapon', qty: 1 }] },
+  arms_deal: { minMob: 35, items: [{ itemId: 'w_assault_rifle', category: 'weapon', qty: 1 }] },
+  hostile_takeover: { minMob: 40, items: [{ itemId: 'a_elite_body_armor', category: 'armor', qty: 1 }] },
+  diamond_run: { minMob: 45, items: [{ itemId: 'v_executive_limo', category: 'vehicle', qty: 1 }] },
+  syndicate_hit: { minMob: 50, items: [{ itemId: 'w_long_range_sniper', category: 'weapon', qty: 1 }] },
+};
+
 export const JOBS = LOCATIONS.flatMap((loc, li) =>
-  JOB_TEMPLATES.slice(0, 3 + Math.min(li, 6)).map(([slug, name, energy, money, xp, failRate, jailMinutes], ji) => ({
-    id: `${loc.id}_${slug}`,
-    artSlug: slug,
-    location: loc.id,
-    name: `${name} (${loc.name})`,
-    energy,
-    money,
-    xp: xp + li * 2,
-    failRate: Math.min(0.35, failRate + li * 0.01),
-    jailMinutes,
-  })),
+  JOB_TEMPLATES.map(([slug, name, energy, money, xp, failRate, jailMinutes]) => {
+    const req = JOB_REQUIREMENTS[slug] || { minMob: 1, items: [] };
+    return {
+      id: `${loc.id}_${slug}`,
+      artSlug: slug,
+      location: loc.id,
+      name: `${name} (${loc.name})`,
+      energy,
+      money,
+      xp: xp + li * 2,
+      failRate: Math.min(0.35, failRate + li * 0.01),
+      jailMinutes,
+      minMob: req.minMob + Math.floor(li / 2),
+      requiredItems: req.items,
+      lootChance: Math.min(0.35, 0.05 + energy * 0.02),
+    };
+  }),
 );
 
 function tieredItems(category, names, statKey, baseStat, basePrice, colors, { baseUpkeep = 0 } = {}) {
@@ -213,9 +247,22 @@ export const TERRITORIES = [
 ];
 
 export const COLLECTIONS = [
-  { id: 'street_set', name: 'Street Set', items: ['w_rusty_knife', 'a_leather_jacket', 'v_beaten_sedan'], bonus: { attack: 5 } },
-  { id: 'warlord_set', name: 'Warlord Set', items: ['w_assault_rifle', 'a_warlord_plate', 'v_armored_suv'], bonus: { attack: 15, defense: 10 } },
-  { id: 'empire_set', name: 'Empire Set', items: ['w_godfather_special', 'a_legend_plate', 'v_mobile_fortress'], bonus: { attack: 50, defense: 40 } },
+  { id: 'street_set', name: 'Street Set', items: ['w_rusty_knife', 'a_leather_jacket', 'v_beaten_sedan', 'w_baseball_bat', 'w_switchblade'], bonus: { attack: 5 } },
+  { id: 'enforcer_set', name: 'Enforcer Set', items: ['w_brass_knuckles', 'a_kevlar_vest', 'v_muscle_car', 'w_street_revolver', 'a_street_helmet'], bonus: { attack: 8, defense: 5 } },
+  { id: 'smuggler_set', name: 'Smuggler Set', items: ['w_compact_smg', 'a_tactical_vest', 'v_speedboat', 'w_sawed_off_shotgun', 'v_armored_suv'], bonus: { attack: 12, defense: 8 } },
+  { id: 'warlord_set', name: 'Warlord Set', items: ['w_assault_rifle', 'a_warlord_plate', 'v_armored_suv', 'w_tactical_rifle', 'a_riot_gear'], bonus: { attack: 15, defense: 10 } },
+  { id: 'syndicate_set', name: 'Syndicate Set', items: ['w_combat_shotgun', 'a_ballistic_suit', 'v_executive_limo', 'w_dual_pistols', 'a_elite_body_armor'], bonus: { attack: 20, defense: 15 } },
+  { id: 'elite_set', name: 'Elite Set', items: ['w_long_range_sniper', 'a_phantom_suit', 'v_private_helicopter', 'w_golden_pistol', 'a_empire_guard'], bonus: { attack: 30, defense: 20 } },
+  { id: 'property_set', name: 'Property Mogul', items: ['p_corner_store', 'p_laundromat_front', 'p_pool_hall', 'p_underground_club', 'p_storage_warehouse'], bonus: { attack: 5, defense: 5 } },
+  { id: 'casino_set', name: 'Casino King', items: ['p_casino_floor', 'p_hotel_tower', 'p_shipping_port', 'p_skyline_tower', 'p_empire_hq'], bonus: { attack: 10, defense: 10 } },
+  { id: 'empire_set', name: 'Empire Set', items: ['w_godfather_special', 'a_legend_plate', 'v_mobile_fortress', 'w_annihilator', 'a_immortal_guard'], bonus: { attack: 50, defense: 40 } },
+  { id: 'don_set', name: 'Don Collection', items: ['w_empire_destroyer', 'a_void_armor', 'v_orbital_shuttle', 'p_world_bank_share', 'p_satellite_network'], bonus: { attack: 75, defense: 60 } },
+];
+
+export const CREW_SPEND_OPTIONS = [
+  { id: 'crew_level', name: 'Upgrade Crew Level', cost: 50000, effect: 'level', amount: 1, minLevel: 1 },
+  { id: 'crew_bonus', name: 'Combat Bonus (+2%)', cost: 25000, effect: 'bonus', amount: 0.02, minLevel: 3 },
+  { id: 'crew_income', name: 'Income Boost (+5%)', cost: 75000, effect: 'income', amount: 0.05, minLevel: 5 },
 ];
 
 export const BOT_NAMES = [
@@ -258,7 +305,24 @@ export const JOB_LOOT = {
   default: [{ itemId: 'consumable_health_kit', category: 'consumable', chance: 0.03, qty: [1, 1] }],
 };
 
-export const ASSET_VERSION = '2.5.1';
+export const ASSET_VERSION = '2.6.3';
+
+export function getMissionMasteryLevel(completions) {
+  let level = 0;
+  for (let i = 0; i < MISSION_MASTERY_THRESHOLDS.length; i++) {
+    if (completions >= MISSION_MASTERY_THRESHOLDS[i]) level = i + 1;
+  }
+  return Math.min(MISSION_MASTERY_MAX, level);
+}
+
+export function getMissionMasteryBonus(masteryLevel) {
+  if (masteryLevel <= 0) return { moneyMult: 1, xpMult: 1, favorBonus: 0 };
+  return {
+    moneyMult: 1 + masteryLevel * 0.1,
+    xpMult: 1 + masteryLevel * 0.08,
+    favorBonus: masteryLevel >= 4 ? 2 : masteryLevel >= 2 ? 1 : 0,
+  };
+}
 
 export function itemThumbnailPath(category, id) {
   return `/assets/items/${category}_${id}.webp?v=${ASSET_VERSION}`;

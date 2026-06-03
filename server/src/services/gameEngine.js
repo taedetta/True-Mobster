@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   WEAPONS, ARMOR, VEHICLES, PROPERTIES, CONSUMABLES, JOBS, LOCATIONS, BOSSES,
   ACHIEVEMENTS, DAILY_LOGIN_REWARDS, DAILY_MISSIONS, SCRATCH_PRIZES, TERRITORIES,
-  FIGHT_TYPES, REGEN, LEVEL_XP, HOSPITAL_COST_PER_HP, HITLIST_MIN_BOUNTY,
+  FIGHT_TYPES, DEFAULT_FIGHT_TYPE, REGEN, LEVEL_XP, HOSPITAL_COST_PER_HP, HITLIST_MIN_BOUNTY,
   HITLIST_FEE_PERCENT, HITLIST_BONUS_MULTIPLIER, CREW_BONUS_PER_MEMBER, CREW_MAX_BONUS,
   MOB_BONUS_PER_MEMBER, MOB_MAX_BONUS,   MOB_RECRUIT_COST, MOB_MAX_SIZE, ICE_COST_PER_HOUR,
   ICE_MAX_HOURS, BAIL_COST_PER_MINUTE, SELL_BACK_RATIO, SCRATCH_CARD_COST, BANK_FEE_PERCENT,
@@ -10,6 +10,9 @@ import {
   generateReferralCode, GOLD_JOB_CHANCE, PROPERTY_MAX_STACK, DEFAULT_AVATARS, avatarUrl,
   MOB_USABLE_PER_LEVEL, getMobBracket, GODFATHER_STORE, GOLD_STORE, ECONOMY_TICK_MS, getItemById,
   ITEM_MAX_STACK, FIGHT_GEAR_LOSS_RATE, itemThumbnailPath, JOB_LOOT,
+  getMissionMasteryLevel, getMissionMasteryBonus, MISSION_MASTERY_THRESHOLDS,
+  BOSS_FIGHT_HOURS, BOSS_MASTERY_KILLS,
+  SKILL_POINTS_PER_LEVEL, STAMINA_SKILL_COST, CREW_SPEND_OPTIONS, HOSPITAL_HEAL_THRESHOLD,
 } from '../../../shared/gameData.js';
 import db, { isPostgres } from '../db/index.js';
 import { getEffectiveMobSize, getMobAllies, getUnreadPmCount } from './chatEngine.js';
@@ -53,6 +56,24 @@ export function calculateHourlyEconomy(inventory, territoryBonus = 0) {
     bonusIncome,
     upkeep,
     netIncome: grossIncome + bonusIncome - upkeep,
+  };
+}
+
+export function calculatePendingEconomy(player, inventory, territoryBonus = 0) {
+  const hourly = calculateHourlyEconomy(inventory, territoryBonus);
+  const lastTick = parseTime(player.last_income_collect || player.created_at);
+  const ticks = Math.floor((Date.now() - lastTick) / ECONOMY_TICK_MS);
+  const cappedTicks = Math.min(Math.max(0, ticks), 24);
+  const incomePending = Math.floor((hourly.grossIncome + hourly.bonusIncome) * cappedTicks);
+  const upkeepPending = Math.floor(hourly.upkeep * cappedTicks);
+  return {
+    ...hourly,
+    ticksPending: cappedTicks,
+    incomePending,
+    upkeepPending,
+    netPending: incomePending - upkeepPending,
+    canCollect: cappedTicks >= 1,
+    nextTickAt: lastTick + ECONOMY_TICK_MS,
   };
 }
 
@@ -216,8 +237,8 @@ async function decrementInventory(userId, itemId, category, qty) {
   return lose;
 }
 
-async function applyFightGearLoss(userId, sideReport, fightType) {
-  const rate = FIGHT_GEAR_LOSS_RATE[fightType] ?? FIGHT_GEAR_LOSS_RATE.fight;
+async function applyFightGearLoss(userId, sideReport) {
+  const rate = FIGHT_GEAR_LOSS_RATE;
   const lost = [];
   const groups = [
     { key: 'weapons', category: 'weapon' },
@@ -281,7 +302,7 @@ export async function addXp(player, amount) {
   while (xp >= LEVEL_XP(level)) {
     xp -= LEVEL_XP(level);
     level += 1;
-    skill_points += 3;
+    skill_points += SKILL_POINTS_PER_LEVEL;
     max_energy += 2;
     max_stamina += 1;
     max_health += 10;
@@ -347,6 +368,46 @@ function rollJobLoot(job) {
   return drops;
 }
 
+async function getInventoryQtyMap(userId) {
+  const rows = await db.all('SELECT item_id, category, quantity FROM inventory WHERE user_id=?', [userId]);
+  const map = {};
+  for (const r of rows) map[`${r.category}:${r.item_id}`] = Number(r.quantity || 0);
+  return map;
+}
+
+function checkJobRequirements(job, player, effectiveMob, invMap) {
+  if ((effectiveMob || player.mob_size) < (job.minMob || 1)) {
+    throw new Error(`Need mob size ${job.minMob} (you have ${effectiveMob || player.mob_size})`);
+  }
+  for (const req of job.requiredItems || []) {
+    const key = `${req.category}:${req.itemId}`;
+    if ((invMap[key] || 0) < (req.qty || 1)) {
+      const item = getCatalogItem(req.itemId, req.category);
+      throw new Error(`Need ${req.qty}x ${item?.name || req.itemId}`);
+    }
+  }
+}
+
+async function incrementJobMastery(userId, jobId) {
+  const row = await db.get('SELECT * FROM job_mastery WHERE user_id=? AND job_id=?', [userId, jobId]);
+  const completions = (row?.completions || 0) + 1;
+  const masteryLevel = getMissionMasteryLevel(completions);
+  if (row) {
+    await db.run('UPDATE job_mastery SET completions=?, mastery_level=? WHERE user_id=? AND job_id=?',
+      [completions, masteryLevel, userId, jobId]);
+  } else {
+    await db.run('INSERT INTO job_mastery (user_id, job_id, completions, mastery_level) VALUES (?, ?, ?, ?)',
+      [userId, jobId, completions, masteryLevel]);
+  }
+  const leveledUp = masteryLevel > (row?.mastery_level || 0);
+  return { completions, masteryLevel, leveledUp };
+}
+
+export async function getJobMastery(userId) {
+  const rows = await db.all('SELECT * FROM job_mastery WHERE user_id=?', [userId]);
+  return Object.fromEntries(rows.map((r) => [r.job_id, { completions: r.completions, masteryLevel: r.mastery_level }]));
+}
+
 export async function doJob(userId, jobId) {
   const job = JOBS.find((j) => j.id === jobId);
   if (!job) throw new Error('Invalid job');
@@ -357,13 +418,22 @@ export async function doJob(userId, jobId) {
   const loc = LOCATIONS.find((l) => l.id === job.location);
   if (player.level < (loc?.minLevel || 1)) throw new Error('Level too low');
 
+  const effectiveMob = await getEffectiveMobSize(userId, player.mob_size);
+  const invMap = await getInventoryQtyMap(userId);
+  checkJobRequirements(job, player, effectiveMob, invMap);
+
+  const masteryRow = await db.get('SELECT * FROM job_mastery WHERE user_id=? AND job_id=?', [userId, jobId]);
+  const masteryLevel = masteryRow?.mastery_level || 0;
+  const masteryBonus = getMissionMasteryBonus(masteryLevel);
+
   const failed = Math.random() < job.failRate;
   let money = 0, xp = 0, jailed = 0, goldEarned = 0;
   const loot = [];
+  let masteryResult = null;
   if (!failed) {
-    money = randomInt(job.money[0], job.money[1]);
-    xp = job.xp;
-    if (Math.random() < GOLD_JOB_CHANCE) goldEarned = randomInt(1, 3);
+    money = Math.floor(randomInt(job.money[0], job.money[1]) * masteryBonus.moneyMult);
+    xp = Math.floor(job.xp * masteryBonus.xpMult);
+    if (Math.random() < GOLD_JOB_CHANCE) goldEarned = randomInt(1, 3) + masteryBonus.favorBonus;
     for (const drop of rollJobLoot(job)) {
       const granted = await grantInventoryItem(userId, drop.itemId, drop.category, drop.qty);
       if (granted) loot.push(granted);
@@ -371,6 +441,7 @@ export async function doJob(userId, jobId) {
     if (loot.length) {
       await addNews(null, 'job_loot', `${player.display_name} found loot on ${job.name}`);
     }
+    masteryResult = await incrementJobMastery(userId, jobId);
   } else {
     jailed = 1;
     await db.run('UPDATE players SET in_jail_until = ? WHERE user_id = ?',
@@ -383,11 +454,11 @@ export async function doJob(userId, jobId) {
     [userId, jobId, failed ? 0 : 1, money, xp, jailed]);
   await trackMission(userId, 'jobs');
   if (!failed) await checkAchievements(userId);
-  return { success: !failed, money, xp, goldEarned, favorEarned: goldEarned, jailed: !!jailed, levelResult, job, loot };
+  return { success: !failed, money, xp, goldEarned, favorEarned: goldEarned, jailed: !!jailed, levelResult, job, loot, mastery: masteryResult };
 }
 
-export async function resolveFight(attackerId, defenderId, fightType = 'fight') {
-  const ft = FIGHT_TYPES[fightType] || FIGHT_TYPES.fight;
+export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_FIGHT_TYPE) {
+  const ft = FIGHT_TYPES[fightType] || FIGHT_TYPES.attack;
   const attacker = await getPlayerRow(attackerId);
   const defender = await getPlayerRow(defenderId);
   if (!attacker || !defender) throw new Error('Player not found');
@@ -395,8 +466,9 @@ export async function resolveFight(attackerId, defenderId, fightType = 'fight') 
   if (attacker.in_jail_until && parseTime(attacker.in_jail_until) > Date.now()) throw new Error('You are in jail');
   if (attacker.stamina < ft.stamina) throw new Error('Not enough stamina');
   if (attacker.health <= 0) throw new Error('You need hospital treatment');
-  if (defender.health <= 0) throw new Error('Target is hospitalized');
   if (defender.iced_until && parseTime(defender.iced_until) > Date.now()) throw new Error('Target is iced (protected)');
+  if (defender.health <= 0) throw new Error('Target is hospitalized');
+  if (defender.in_jail_until && parseTime(defender.in_jail_until) > Date.now()) throw new Error('Target is in jail');
 
   const invA = await db.all('SELECT * FROM inventory WHERE user_id=?', [attackerId]);
   const invD = await db.all('SELECT * FROM inventory WHERE user_id=?', [defenderId]);
@@ -421,13 +493,15 @@ export async function resolveFight(attackerId, defenderId, fightType = 'fight') 
   const winChance = Math.min(0.95, Math.max(0.05, 0.5 + (powerRatio - 1) * 0.25));
   const attackerWon = Math.random() < winChance;
 
-  let moneyStolen = 0, respectGained = 0, bountyClaimed = 0, killed = 0;
+  let moneyStolen = 0, respectGained = 0, bountyClaimed = 0;
   let attackerItemsLost = [];
   let defenderItemsLost = [];
+  let attackerDamageTaken = 0;
+  let defenderDamageTaken = 0;
   const hitlistEntry = await db.get('SELECT * FROM hitlist WHERE target_id=? AND claimed=0 ORDER BY bounty DESC LIMIT 1', [defenderId]);
 
   if (attackerWon) {
-    defenderItemsLost = await applyFightGearLoss(defenderId, defReport, fightType);
+    defenderItemsLost = await applyFightGearLoss(defenderId, defReport);
     moneyStolen = randomInt(ft.money[0], Math.min(ft.money[1], Math.floor(defender.money * 0.15)));
     moneyStolen = Math.min(moneyStolen, defender.money);
     respectGained = ft.respect;
@@ -437,28 +511,37 @@ export async function resolveFight(attackerId, defenderId, fightType = 'fight') 
       await db.run('UPDATE hitlist SET claimed=1 WHERE id=?', [hitlistEntry.id]);
       await db.run('UPDATE players SET bounties_claimed=bounties_claimed+1 WHERE user_id=?', [attackerId]);
     }
-    const dmg = randomInt(ft.damage[0], ft.damage[1]);
-    if (fightType === 'execute' && Math.random() < (ft.killChance || 0)) killed = 1;
-    const defHealth = killed ? 0 : Math.max(0, defender.health - dmg);
-    await db.run('UPDATE players SET stamina=stamina-?, money=money+?, respect=respect+?, wins=wins+1, kills=kills+? WHERE user_id=?',
-      [ft.stamina, moneyStolen, respectGained, killed, attackerId]);
+    defenderDamageTaken = randomInt(ft.damage[0], ft.damage[1]);
+    attackerDamageTaken = randomInt(1, Math.max(1, Math.floor(defenderDamageTaken / 4)));
+    const defHealth = Math.max(0, defender.health - defenderDamageTaken);
+    await db.run('UPDATE players SET stamina=stamina-?, health=CASE WHEN health-? < 0 THEN 0 ELSE health-? END, money=money+?, respect=respect+?, wins=wins+1 WHERE user_id=?',
+      [ft.stamina, attackerDamageTaken, attackerDamageTaken, moneyStolen, respectGained, attackerId]);
     await db.run('UPDATE players SET money=CASE WHEN money-? < 0 THEN 0 ELSE money-? END, health=?, losses=losses+1 WHERE user_id=?',
       [moneyStolen - (hitlistEntry ? bountyClaimed : 0), moneyStolen - (hitlistEntry ? bountyClaimed : 0), defHealth, defenderId]);
     if (defender.is_bot) await scheduleBotRetaliation(defenderId, attackerId);
   } else {
-    attackerItemsLost = await applyFightGearLoss(attackerId, atkReport, fightType);
-    const dmg = randomInt(ft.damage[0] + 5, ft.damage[1] + 10);
-    await db.run('UPDATE players SET stamina=stamina-?, health=CASE WHEN health-? < 0 THEN 0 ELSE health-? END, losses=losses+1 WHERE user_id=?', [ft.stamina, dmg, dmg, attackerId]);
+    attackerItemsLost = await applyFightGearLoss(attackerId, atkReport);
+    attackerDamageTaken = randomInt(ft.damage[0] + 5, ft.damage[1] + 10);
+    defenderDamageTaken = randomInt(1, Math.max(1, Math.floor(attackerDamageTaken / 5)));
+    await db.run('UPDATE players SET stamina=stamina-?, health=CASE WHEN health-? < 0 THEN 0 ELSE health-? END, losses=losses+1 WHERE user_id=?', [ft.stamina, attackerDamageTaken, attackerDamageTaken, attackerId]);
+    await db.run('UPDATE players SET health=CASE WHEN health-? < 0 THEN 0 ELSE health-? END WHERE user_id=?', [defenderDamageTaken, defenderDamageTaken, defenderId]);
   }
 
+  const xpGained = attackerWon ? ft.xpWin : ft.xpLose;
+
   const fightReport = {
-    fightType,
+    fightType: DEFAULT_FIGHT_TYPE,
     attackerWon: !!attackerWon,
     moneyStolen,
     respectGained,
     bountyClaimed,
-    killed: !!killed,
+    killed: false,
     winChance: Math.round(winChance * 100),
+    attackerDamageTaken,
+    defenderDamageTaken,
+    xpGained,
+    defenderId: defender.user_id,
+    defenderName: defender.display_name,
     attacker: { ...atkReport, itemsLost: attackerItemsLost },
     defender: { ...defReport, itemsLost: defenderItemsLost },
   };
@@ -468,10 +551,10 @@ export async function resolveFight(attackerId, defenderId, fightType = 'fight') 
     await trackMission(attackerId, 'wins');
   }
 
-  await addXp(attacker, attackerWon ? ft.xpWin : ft.xpLose);
+  await addXp(attacker, xpGained);
   await db.run(
     'INSERT INTO combat_log (attacker_id, defender_id, fight_type, attacker_won, money_stolen, respect_gained, bounty_claimed, killed, fight_details) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [attackerId, defenderId, fightType, attackerWon ? 1 : 0, moneyStolen, respectGained, bountyClaimed, killed, JSON.stringify(fightReport)],
+    [attackerId, defenderId, DEFAULT_FIGHT_TYPE, attackerWon ? 1 : 0, moneyStolen, respectGained, bountyClaimed, 0, JSON.stringify(fightReport)],
   );
   const lastLog = await db.get(
     'SELECT id FROM combat_log WHERE attacker_id=? AND defender_id=? ORDER BY id DESC LIMIT 1',
@@ -487,7 +570,7 @@ export async function resolveFight(attackerId, defenderId, fightType = 'fight') 
     await sendMail(
       defenderId,
       'You were attacked!',
-      `${attacker.display_name} ${fightType}ed you and won $${moneyStolen.toLocaleString()}. You lost: ${lossSummary(defenderItemsLost)}.`,
+      `${attacker.display_name} attacked you and won $${moneyStolen.toLocaleString()}. You lost: ${lossSummary(defenderItemsLost)}.`,
       'combat',
       { fightReport, role: 'defender', combatLogId: fightReport.combatLogId },
     );
@@ -503,9 +586,9 @@ export async function resolveFight(attackerId, defenderId, fightType = 'fight') 
 
   await checkAchievements(attackerId);
   return {
-    attackerWon, moneyStolen, respectGained, bountyClaimed, killed,
+    attackerWon, moneyStolen, respectGained, bountyClaimed, killed: 0,
     hitlistBonus: bountyClaimed > 0, atkStats, defStats,
-    winChance: Math.round(winChance * 100), fightType, fightReport, combatLogId,
+    winChance: Math.round(winChance * 100), fightType: DEFAULT_FIGHT_TYPE, fightReport, combatLogId,
   };
 }
 
@@ -521,7 +604,7 @@ export async function processBotRetaliations() {
       const bot = await getPlayerRow(entry.bot_id);
       const target = await getPlayerRow(entry.target_id);
       if (bot && target && bot.stamina >= 1 && bot.health > 0 && target.health > 0) {
-        await resolveFight(entry.bot_id, entry.target_id, 'fight');
+        await resolveFight(entry.bot_id, entry.target_id, DEFAULT_FIGHT_TYPE);
       }
     } catch { /* skip */ }
     await db.run('UPDATE bot_retaliation_queue SET processed=1 WHERE id=?', [entry.id]);
@@ -652,6 +735,10 @@ export async function healAtHospital(userId, healAmount = null) {
   const player = await getPlayerRow(userId);
   const missing = player.max_health - player.health;
   if (missing <= 0) throw new Error('Already at full health');
+  const belowThreshold = player.health / player.max_health < HOSPITAL_HEAL_THRESHOLD;
+  if (!belowThreshold && healAmount === null) {
+    throw new Error(`Hospital only available below ${Math.round(HOSPITAL_HEAL_THRESHOLD * 100)}% health — use Godfather or wait for regen`);
+  }
   const amount = healAmount ? Math.min(Math.max(1, Math.floor(healAmount)), missing) : missing;
   const cost = amount * HOSPITAL_COST_PER_HP;
   if (player.money < cost) throw new Error(`Not enough money — need $${cost.toLocaleString()}`);
@@ -692,8 +779,9 @@ export async function allocateSkill(userId, stat) {
   const valid = ['attack_skill', 'defense_skill', 'energy_skill', 'stamina_skill', 'health_skill'];
   if (!valid.includes(stat)) throw new Error('Invalid stat');
   const player = await getPlayerRow(userId);
-  if (player.skill_points < 1) throw new Error('No skill points');
-  let sql = `UPDATE players SET ${stat} = ${stat} + 1, skill_points = skill_points - 1`;
+  const cost = stat === 'stamina_skill' ? STAMINA_SKILL_COST : 1;
+  if (player.skill_points < cost) throw new Error(`Need ${cost} skill point(s)`);
+  let sql = `UPDATE players SET ${stat} = ${stat} + 1, skill_points = skill_points - ${cost}`;
   if (stat === 'energy_skill') sql += ', max_energy = max_energy + 2';
   if (stat === 'stamina_skill') sql += ', max_stamina = max_stamina + 1';
   if (stat === 'health_skill') sql += ', max_health = max_health + 10';
@@ -832,12 +920,27 @@ export async function getBossList(userId) {
     );
   }
   const defeatedToday = new Set(defeatedRows.map((r) => r.boss_id));
-  return BOSSES.map((b) => ({
-    ...b,
-    thumbnail: itemThumbnailPath('boss', b.id),
-    defeatedToday: defeatedToday.has(b.id),
-    cooldown: false,
-  }));
+  const progressRows = await db.all('SELECT * FROM boss_progress WHERE user_id=?', [userId]);
+  const masteryRows = await db.all('SELECT * FROM boss_mastery WHERE user_id=?', [userId]);
+  const progressMap = Object.fromEntries(progressRows.map((r) => [r.boss_id, r]));
+  const masteryMap = Object.fromEntries(masteryRows.map((r) => [r.boss_id, r.kill_count || 0]));
+  const now = Date.now();
+  return BOSSES.map((b) => {
+    const prog = progressMap[b.id];
+    const expired = prog && parseTime(prog.expires_at) <= now;
+    return {
+      ...b,
+      thumbnail: itemThumbnailPath('boss', b.id),
+      defeatedToday: defeatedToday.has(b.id),
+      masteryKills: masteryMap[b.id] || 0,
+      masteryComplete: (masteryMap[b.id] || 0) >= BOSS_MASTERY_KILLS,
+      progress: prog && !expired ? {
+        currentHp: prog.current_hp,
+        maxHp: b.hp,
+        expiresAt: prog.expires_at,
+      } : null,
+    };
+  });
 }
 
 export async function fightBoss(userId, bossId) {
@@ -845,25 +948,67 @@ export async function fightBoss(userId, bossId) {
   if (!boss) throw new Error('Invalid boss');
   const player = await getPlayerRow(userId);
   if (player.level < boss.minLevel) throw new Error('Level too low');
-  if (player.stamina < boss.stamina) throw new Error('Not enough stamina');
+  const staminaCost = boss.stamina;
+  if (player.stamina < staminaCost) throw new Error('Not enough stamina');
   const defeated = await getBossList(userId);
   if (defeated.find((b) => b.id === bossId)?.defeatedToday) throw new Error('Already defeated this boss today');
+
   const inv = await db.all('SELECT * FROM inventory WHERE user_id=?', [userId]);
   const stats = await getCombatStats(player, await getCrewMemberCount(player.crew_id), inv);
-  const winChance = Math.min(0.9, Math.max(0.1, stats.attack / (boss.defense + boss.attack * 0.5)));
-  const won = Math.random() < winChance;
-  await db.run('UPDATE players SET stamina=stamina-? WHERE user_id=?', [boss.stamina, userId]);
+  const damage = Math.floor(stats.attack);
+
+  let progress = await db.get('SELECT * FROM boss_progress WHERE user_id=? AND boss_id=?', [userId, bossId]);
+  const now = Date.now();
+  if (!progress || parseTime(progress.expires_at) <= now) {
+    const expiresAt = new Date(now + BOSS_FIGHT_HOURS * 3600000).toISOString();
+    if (progress) {
+      await db.run('UPDATE boss_progress SET current_hp=?, expires_at=?, started_at=? WHERE user_id=? AND boss_id=?',
+        [boss.hp, expiresAt, nowISO(), userId, bossId]);
+    } else {
+      await db.run('INSERT INTO boss_progress (user_id, boss_id, current_hp, expires_at) VALUES (?, ?, ?, ?)',
+        [userId, bossId, boss.hp, expiresAt]);
+    }
+    progress = { current_hp: boss.hp, expires_at: expiresAt };
+  }
+
+  const newHp = Math.max(0, progress.current_hp - damage);
+  await db.run('UPDATE players SET stamina=stamina-? WHERE user_id=?', [staminaCost, userId]);
+  await db.run('UPDATE boss_progress SET current_hp=? WHERE user_id=? AND boss_id=?', [newHp, userId, bossId]);
+
+  let won = false;
   let money = 0;
-  if (won) {
+  if (newHp <= 0) {
+    won = true;
     money = randomInt(boss.money[0], boss.money[1]);
-    await db.run('UPDATE players SET money=money+?, respect=respect+?, boss_kills=boss_kills+1 WHERE user_id=?', [money, boss.respect, userId]);
+    await db.run('UPDATE players SET money=money+?, respect=respect+?, boss_kills=boss_kills+1 WHERE user_id=?',
+      [money, boss.respect, userId]);
     await addXp(player, boss.xp);
     await trackMission(userId, 'boss_fights');
     await checkAchievements(userId);
     await addNews(userId, 'boss_kill', `${player.display_name} defeated ${boss.name}!`);
+    await db.run('DELETE FROM boss_progress WHERE user_id=? AND boss_id=?', [userId, bossId]);
+
+    const masteryRow = await db.get('SELECT * FROM boss_mastery WHERE user_id=? AND boss_id=?', [userId, bossId]);
+    const killCount = (masteryRow?.kill_count || 0) + 1;
+    if (masteryRow) {
+      await db.run('UPDATE boss_mastery SET kill_count=? WHERE user_id=? AND boss_id=?', [killCount, userId, bossId]);
+    } else {
+      await db.run('INSERT INTO boss_mastery (user_id, boss_id, kill_count) VALUES (?, ?, ?)', [userId, bossId, killCount]);
+    }
   }
-  await db.run('INSERT INTO boss_fights (user_id, boss_id, won, damage_dealt) VALUES (?, ?, ?, ?)', [userId, bossId, won ? 1 : 0, stats.attack]);
-  return { won, money, boss, winChance: Math.round(winChance * 100) };
+
+  await db.run('INSERT INTO boss_fights (user_id, boss_id, won, damage_dealt) VALUES (?, ?, ?, ?)',
+    [userId, bossId, won ? 1 : 0, damage]);
+  return {
+    won,
+    money,
+    boss,
+    damageDealt: damage,
+    remainingHp: newHp,
+    maxHp: boss.hp,
+    staminaCost,
+    masteryKill: won,
+  };
 }
 
 // Social
@@ -1039,9 +1184,83 @@ export async function updateCustomAvatar(userId, dataUrl) {
 }
 
 export async function getRevengeList(userId) {
-  return db.all(`SELECT DISTINCT p.user_id, p.display_name, p.level, cl.created_at as last_attack
+  return db.all(`SELECT DISTINCT p.user_id, p.display_name, p.level, p.health, p.max_health,
+    p.respect, p.mob_size,
+    (p.mob_size + COALESCE((SELECT COUNT(*) FROM mob_allies ma WHERE ma.user_id=p.user_id), 0)) AS effective_mob,
+    cl.created_at as last_attack
     FROM combat_log cl JOIN players p ON p.user_id=cl.attacker_id
     WHERE cl.defender_id=? AND cl.attacker_won=1 ORDER BY cl.created_at DESC LIMIT 20`, [userId]);
+}
+
+export async function getExecuteList(userId, limit = 20) {
+  const player = await getPlayerRow(userId);
+  if (!player) return [];
+  const effectiveMob = await getEffectiveMobSize(userId, player.mob_size);
+  const bracket = getMobBracket(effectiveMob);
+  const rows = await db.all(
+    `SELECT p.user_id, p.display_name, p.level, p.respect, u.is_bot, p.health, p.max_health,
+      p.mob_size,
+      (p.mob_size + COALESCE((SELECT COUNT(*) FROM mob_allies ma WHERE ma.user_id=p.user_id), 0)) AS effective_mob
+     FROM players p JOIN users u ON u.id=p.user_id
+     WHERE p.user_id!=? AND p.health<=0 AND p.level BETWEEN ? AND ?
+     ORDER BY p.level DESC LIMIT ?`,
+    [userId, Math.max(1, player.level - 15), player.level + 15, limit * 3],
+  );
+  return rows.filter((r) => {
+    const em = Number(r.effective_mob || r.mob_size || 1);
+    return em >= bracket.min && em <= bracket.max;
+  }).slice(0, limit);
+}
+
+export async function broadcastToMob(userId, message) {
+  if (!message || message.trim().length < 3) throw new Error('Message too short');
+  if (message.length > 280) throw new Error('Message too long (max 280)');
+  const player = await getPlayerRow(userId);
+  const allies = await getMobAllies(userId);
+  const body = `${player.display_name} broadcasts: ${message.trim()}`;
+  await addNews(userId, 'mob_broadcast', body);
+  for (const ally of allies) {
+    await sendMail(ally.user_id, 'Mob Broadcast', body, 'mob_broadcast', { from: userId });
+  }
+  return { sent: allies.length, message: body };
+}
+
+export async function getProfileComments(profileUserId, limit = 30) {
+  return db.all(
+    `SELECT c.*, p.display_name as author_name, p.level as author_level
+     FROM profile_comments c JOIN players p ON p.user_id=c.author_id
+     WHERE c.profile_user_id=? ORDER BY c.created_at DESC LIMIT ?`,
+    [profileUserId, limit],
+  );
+}
+
+export async function addProfileComment(authorId, profileUserId, body) {
+  if (authorId === profileUserId) throw new Error('Cannot comment on your own profile');
+  if (!body || body.trim().length < 2) throw new Error('Comment too short');
+  if (body.length > 500) throw new Error('Comment too long');
+  const target = await getPlayerRow(profileUserId);
+  if (!target) throw new Error('Player not found');
+  await db.run('INSERT INTO profile_comments (profile_user_id, author_id, body) VALUES (?, ?, ?)',
+    [profileUserId, authorId, body.trim()]);
+  const author = await getPlayerRow(authorId);
+  await sendMail(profileUserId, 'Profile comment', `${author.display_name} commented: "${body.trim()}"`, 'profile_comment', { authorId });
+  return { ok: true };
+}
+
+export async function spendCrewTreasury(userId, spendId) {
+  const option = CREW_SPEND_OPTIONS.find((o) => o.id === spendId);
+  if (!option) throw new Error('Invalid spend option');
+  const player = await getPlayerRow(userId);
+  if (!player.crew_id || player.crew_role !== 'leader') throw new Error('Must be crew leader');
+  const crew = await db.get('SELECT * FROM crews WHERE id=?', [player.crew_id]);
+  if ((crew?.level || 1) < option.minLevel) throw new Error(`Crew level ${option.minLevel} required`);
+  if ((crew?.bank_balance || 0) < option.cost) throw new Error('Insufficient crew treasury');
+  await db.run('UPDATE crews SET bank_balance=bank_balance-? WHERE id=?', [option.cost, player.crew_id]);
+  if (option.effect === 'level') {
+    await db.run('UPDATE crews SET level=level+? WHERE id=?', [option.amount, player.crew_id]);
+  }
+  await addNews(userId, 'crew_spend', `${crew.name} spent treasury on ${option.name}`);
+  return { option, remaining: (crew.bank_balance || 0) - option.cost };
 }
 
 function getBestGear(inventory, category, catalog, statKey) {
@@ -1173,15 +1392,24 @@ export async function buildPlayerState(userId) {
   const now = Date.now();
   const incomeHours = (now - lastTick) / 3600000;
   const mobBracket = getMobBracket(effectiveMobSize);
+  const jobMastery = await getJobMastery(userId);
   const nextRegen = (field, max, last, sec) => {
     if (player[field] >= player[max]) return null;
     return parseTime(last) + sec * 1000;
   };
+  const equippedWeapon = player.equipped_weapon ? getItemById(player.equipped_weapon) : null;
+  const bestOwnedWeapon = inventory
+    .filter((i) => i.category === 'weapon')
+    .map((i) => getItemById(i.item_id))
+    .filter((i) => i && i.attack != null)
+    .sort((a, b) => (b.attack || 0) - (a.attack || 0))[0];
+  const weaponDisplay = equippedWeapon || bestOwnedWeapon;
   return {
     ...player, is_bot: !!player.is_bot, inventory, crew, crewMembers, combat, mobAllies,
     effective_mob_size: effectiveMobSize,
     usable_mob_in_fight: Math.min(effectiveMobSize, (player.level || 1) * MOB_USABLE_PER_LEVEL),
     mob_bracket: mobBracket,
+    jobMastery,
     collections: getCollectionProgress(inventory),
     xpNeeded: LEVEL_XP(player.level), regen: REGEN,
     regenAt: {
@@ -1189,15 +1417,14 @@ export async function buildPlayerState(userId) {
       stamina: nextRegen('stamina', 'max_stamina', 'last_stamina_regen', REGEN.staminaSeconds),
       health: nextRegen('health', 'max_health', 'last_health_regen', REGEN.healthSeconds),
     },
-    incomeReady: incomeHours >= 1,
-    incomeHoursAccrued: Math.floor(Math.min(incomeHours, 24)),
     economy: {
       grossIncome: hourly.grossIncome,
       bonusIncome: hourly.bonusIncome,
       upkeep: hourly.upkeep,
       netIncome: hourly.netIncome,
       nextTickAt,
-      minutesToTick: Math.max(0, Math.ceil((nextTickAt - now) / 60000)),
+      minutesToTick: Math.max(0, Math.ceil((nextTickAt - Date.now()) / 60000)),
+      autoCollect: true,
     },
     unreadMail: Number(unreadMail?.c || 0), unreadPm,
     dailyMissions: missions, canClaimDaily,
@@ -1208,6 +1435,7 @@ export async function buildPlayerState(userId) {
     goldStore: GODFATHER_STORE,
     godfatherStore: GODFATHER_STORE,
     favor_points: player.gold || 0,
+    equippedWeapon: weaponDisplay ? { id: weaponDisplay.id, name: weaponDisplay.name, thumbnail: itemThumbnailPath(weaponDisplay) } : null,
   };
 }
 

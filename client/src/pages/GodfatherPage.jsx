@@ -33,7 +33,7 @@ export default function GodfatherPage() {
           <p className="text-xs text-gray-400 mt-1">
             Trade Favor Points for refills, hired guns, cash, and elite bonuses — just like iMobsters.
           </p>
-          <p className="text-lg font-bold text-purple-300 mt-2">{favor} Favor Points</p>
+          <p className="text-lg font-bold text-red-300 mt-2">{favor} Favor Points</p>
           <p className="text-[10px] text-gray-500">Earn favor from jobs, daily login & achievements</p>
         </div>
       </div>
@@ -50,7 +50,7 @@ export default function GodfatherPage() {
                   <p className="font-semibold text-sm">{pack.icon} {pack.name}</p>
                   <p className="text-xs text-gray-400">{pack.favorCost} favor each</p>
                   {pack.effect === 'cash' && <p className="text-xs text-green-400">≈ {formatMoney((pack.cashPerLevel || 500) * state.level * qty)}</p>}
-                  {pack.effect === 'mob' && <p className="text-xs text-purple-300">+{(pack.amount || 1) * qty} mob</p>}
+                  {pack.effect === 'mob' && <p className="text-xs text-red-300">+{(pack.amount || 1) * qty} mob</p>}
                 </div>
               </div>
               <div className="flex items-center gap-2">
