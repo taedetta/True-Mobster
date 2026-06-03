@@ -244,9 +244,19 @@ export async function initDatabase() {
       connectionString: process.env.DATABASE_URL,
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     });
-    await pgPool.query(SCHEMA);
-    for (const t of ['downtown_block', 'industrial_yard', 'waterfront_docks', 'casino_strip', 'skyline_crown', 'empire_throne']) {
-      await pgPool.query('INSERT INTO territories (id) VALUES ($1) ON CONFLICT DO NOTHING', [t]);
+    pgPool.on('connect', (client) => {
+      client.query('SET search_path TO true_mobsters, public');
+    });
+    const client = await pgPool.connect();
+    try {
+      await client.query('CREATE SCHEMA IF NOT EXISTS true_mobsters');
+      await client.query('SET search_path TO true_mobsters');
+      await client.query(SCHEMA);
+      for (const t of ['downtown_block', 'industrial_yard', 'waterfront_docks', 'casino_strip', 'skyline_crown', 'empire_throne']) {
+        await client.query('INSERT INTO territories (id) VALUES ($1) ON CONFLICT DO NOTHING', [t]);
+      }
+    } finally {
+      client.release();
     }
     return;
   }
