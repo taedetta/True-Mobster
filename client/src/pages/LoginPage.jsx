@@ -1,11 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { SUPPORTED_LANGUAGES, detectBrowserLocale } from '../../../shared/languages.js';
 
 export default function LoginPage() {
   const { login, register, loading } = useAuth();
   const [mode, setMode] = useState('login');
-  const [form, setForm] = useState({ username: '', email: '', password: '', displayName: '', referralCode: '' });
+  const [form, setForm] = useState({
+    username: '',
+    email: '',
+    password: '',
+    displayName: '',
+    referralCode: '',
+    locale: detectBrowserLocale(),
+  });
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    setForm((f) => ({ ...f, locale: detectBrowserLocale() }));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -14,7 +26,18 @@ export default function LoginPage() {
       if (mode === 'login') {
         await login(form.username, form.password);
       } else {
-        await register(form.username, form.email, form.password, form.displayName || form.username, form.referralCode || undefined);
+        if (!form.locale) {
+          setError('Please select your language');
+          return;
+        }
+        await register(
+          form.username,
+          form.email,
+          form.password,
+          form.displayName || form.username,
+          form.referralCode || undefined,
+          form.locale,
+        );
       }
     } catch (err) {
       setError(err.message);
@@ -41,6 +64,22 @@ export default function LoginPage() {
           <>
             <input className="w-full px-4 py-3 rounded-lg bg-mob-bg border border-mob-border focus:border-mob-gold outline-none" placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
             <input className="w-full px-4 py-3 rounded-lg bg-mob-bg border border-mob-border focus:border-mob-gold outline-none" placeholder="Display Name (optional)" value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} />
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Your language (required)</label>
+              <select
+                className="w-full px-4 py-3 rounded-lg bg-mob-bg border border-mob-border focus:border-mob-gold outline-none text-sm"
+                value={form.locale}
+                onChange={(e) => setForm({ ...form, locale: e.target.value })}
+                required
+              >
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.nativeName} — {lang.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-gray-500 mt-1">Private messages are auto-translated for players in other languages.</p>
+            </div>
             <input className="w-full px-4 py-3 rounded-lg bg-mob-bg border border-mob-border focus:border-mob-gold outline-none font-mono uppercase" placeholder="Friend's Invite Code (optional)" value={form.referralCode} onChange={(e) => setForm({ ...form, referralCode: e.target.value.toUpperCase() })} />
           </>
         )}

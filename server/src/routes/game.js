@@ -11,13 +11,14 @@ import {
   addFriend, removeFriend, getFriends, sendGift, getGifts, claimGifts,
   getMail, readMail, readAllMail, getNews, getRevengeList, getExecuteList, getPlayerProfile,
   getTerritories, declareTerritoryWar, donateToCrew, spendCrewTreasury, kickCrewMember, transferLeadership,
-  updateAvatar, updateCustomAvatar, buyGodfatherItem, buyGoldStoreItem, getCollectionProgress, getBossList,
+  updateAvatar, updateCustomAvatar, updatePlayerLocale, buyGodfatherItem, buyGoldStoreItem, getCollectionProgress, getBossList,
   getJobMastery, broadcastToMob, getProfileComments, addProfileComment,
 } from '../services/gameEngine.js';
 import {
   sendChatMessage, getChatMessages, sendPrivateMessage, getPrivateMessages,
   readPrivateMessage, addMobAlly, removeMobAlly, getMobAllies,
 } from '../services/chatEngine.js';
+import { translateText } from '../services/translateService.js';
 import {
   JOBS, LOCATIONS, WEAPONS, ARMOR, VEHICLES, PROPERTIES, CONSUMABLES, BOSSES,
   ACHIEVEMENTS, DAILY_MISSIONS, DAILY_LOGIN_REWARDS, TERRITORIES, FIGHT_TYPES,
@@ -184,7 +185,13 @@ router.post('/mob/ally/remove', wrap(async (req) => {
 // Chat
 router.get('/chat/:channel', wrap(async (req) => {
   const state = await buildPlayerState(req.userId);
-  const messages = await getChatMessages(req.params.channel, state?.crew?.id, Number(req.query.limit) || 50);
+  const messages = await getChatMessages(
+    req.params.channel,
+    state?.crew?.id,
+    req.userId,
+    state?.locale || 'en',
+    Number(req.query.limit) || 50,
+  );
   return { messages: messages.reverse() };
 }));
 
@@ -193,10 +200,14 @@ router.post('/chat/send', wrap(async (req) => {
   return { message: msg };
 }));
 
-router.get('/pm', wrap(async (req) => ({
-  inbox: await getPrivateMessages(req.userId, 'inbox'),
-  sent: await getPrivateMessages(req.userId, 'sent'),
-})));
+router.get('/pm', wrap(async (req) => {
+  const state = await buildPlayerState(req.userId);
+  const locale = state?.locale || 'en';
+  return {
+    inbox: await getPrivateMessages(req.userId, 'inbox', locale),
+    sent: await getPrivateMessages(req.userId, 'sent', locale),
+  };
+}));
 
 router.post('/pm/send', wrap(async (req) => {
   const result = await sendPrivateMessage(req.userId, req.body.toUsername, req.body.subject, req.body.body);
@@ -214,6 +225,17 @@ router.post('/profile/avatar', wrap(async (req) => {
     ? await updateCustomAvatar(req.userId, req.body.custom)
     : await updateAvatar(req.userId, req.body.avatarId);
   return { ...result, state: await buildPlayerState(req.userId) };
+}));
+
+router.post('/profile/locale', wrap(async (req) => {
+  await updatePlayerLocale(req.userId, req.body.locale);
+  return { state: await buildPlayerState(req.userId) };
+}));
+
+router.post('/translate', wrap(async (req) => {
+  const { text, from, to } = req.body;
+  if (!text) throw new Error('Text required');
+  return translateText(text, from || 'en', to || 'en');
 }));
 
 router.get('/collections', wrap(async (req) => {

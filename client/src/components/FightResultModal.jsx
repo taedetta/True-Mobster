@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import ItemImage from './ItemImage';
 import { formatMoney } from '../api';
 import { useGame } from '../context/GameContext';
+import { t } from '../../../shared/uiStrings.js';
 
 function MobGearIcons({ side, label }) {
   if (!side) return null;
@@ -57,7 +58,7 @@ export default function FightResultModal({
   onClose,
   onAttackAgain,
 }) {
-  const { action } = useGame();
+  const { action, state } = useGame();
   const [comment, setComment] = useState('');
   const [commentSent, setCommentSent] = useState(false);
 
@@ -86,7 +87,8 @@ export default function FightResultModal({
   const youLost = youSide?.itemsLost || [];
   const themLost = themSide?.itemsLost || [];
 
-  const headline = won ? 'Eccellente!' : 'You lost!';
+  const locale = state?.locale || 'en';
+  const headline = won ? t('fightVictory', locale) : t('fightLost', locale);
 
   const postComment = async () => {
     if (!defId || comment.trim().length < 2) return;

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useGame } from '../context/GameContext';import { api, formatMoney } from '../api';
+import { SUPPORTED_LANGUAGES } from '../../../shared/languages.js';
+import { t } from '../../../shared/uiStrings.js';
 
 const SKILLS = [
   { stat: 'attack_skill', label: 'Attack', icon: '⚔️', cost: 1 },
@@ -18,11 +20,16 @@ export default function ProfilePage() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [bankAmount, setBankAmount] = useState('');
   const [copied, setCopied] = useState(false);
+  const [locale, setLocale] = useState('en');
   const fileRef = useRef(null);
 
   useEffect(() => {
     api('/game/leaderboard').then(setLeaderboard);
   }, [state]);
+
+  useEffect(() => {
+    if (state?.locale) setLocale(state.locale);
+  }, [state?.locale]);
 
   if (!state) return null;
 
@@ -56,6 +63,30 @@ export default function ProfilePage() {
         <img src={state.avatar_url} alt="" className="w-24 h-24 rounded-full border-2 border-mob-gold mx-auto object-cover bg-mob-bg" />
         <h2 className="font-display text-mob-gold mt-3">{state.display_name}</h2>
         <p className="text-xs text-gray-400">Level {state.level}</p>
+      </div>
+
+      <div className="card">
+        <h3 className="font-semibold text-sm mb-2">{t('language', locale)}</h3>
+        <select
+          className="w-full px-3 py-2 rounded-lg bg-mob-bg border border-mob-border text-sm mb-2"
+          value={locale}
+          onChange={(e) => setLocale(e.target.value)}
+        >
+          {SUPPORTED_LANGUAGES.map((lang) => (
+            <option key={lang.code} value={lang.code}>
+              {lang.nativeName} — {lang.name}
+            </option>
+          ))}
+        </select>
+        <p className="text-[10px] text-gray-500 mb-2">{t('languageHint', locale)}</p>
+        <button
+          type="button"
+          className="btn-secondary w-full text-sm"
+          disabled={locale === state.locale}
+          onClick={() => action('/profile/locale', { locale }, t('languageUpdated', locale))}
+        >
+          {t('saveLanguage', locale)}
+        </button>
       </div>
 
       <div className="card">

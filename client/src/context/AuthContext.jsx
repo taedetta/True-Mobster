@@ -59,12 +59,12 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const register = async (username, email, password, displayName, referralCode) => {
+  const register = async (username, email, password, displayName, referralCode, locale) => {
     setLoading(true);
     try {
       const data = await api('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ username, email, password, displayName, referralCode }),
+        body: JSON.stringify({ username, email, password, displayName, referralCode, locale }),
       });
       localStorage.setItem('tm_token', data.token);
       localStorage.setItem('tm_user', JSON.stringify(data));

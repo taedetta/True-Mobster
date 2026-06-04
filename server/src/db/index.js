@@ -337,6 +337,9 @@ export async function initDatabase() {
         `CREATE TABLE IF NOT EXISTS boss_mastery (
           user_id TEXT NOT NULL, boss_id TEXT NOT NULL, kill_count INTEGER DEFAULT 0,
           PRIMARY KEY (user_id, boss_id))`,
+        "ALTER TABLE players ADD COLUMN IF NOT EXISTS locale TEXT DEFAULT 'en'",
+        "ALTER TABLE private_messages ADD COLUMN IF NOT EXISTS source_locale TEXT DEFAULT 'en'",
+        "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS source_locale TEXT DEFAULT 'en'",
       ];
       for (const m of pgMigrations) {
         try { await client.query(m); } catch { /* */ }
@@ -393,6 +396,9 @@ export async function initDatabase() {
     `CREATE TABLE IF NOT EXISTS boss_mastery (
       user_id TEXT NOT NULL, boss_id TEXT NOT NULL, kill_count INTEGER DEFAULT 0,
       PRIMARY KEY (user_id, boss_id))`,
+    "ALTER TABLE players ADD COLUMN locale TEXT DEFAULT 'en'",
+    "ALTER TABLE private_messages ADD COLUMN source_locale TEXT DEFAULT 'en'",
+    "ALTER TABLE chat_messages ADD COLUMN source_locale TEXT DEFAULT 'en'",
   ];
   for (const m of migrations) {
     try { sqliteDb.exec(m); } catch { /* column exists */ }

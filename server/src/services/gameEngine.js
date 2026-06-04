@@ -17,6 +17,7 @@ import {
   BOSS_FIGHT_HOURS, BOSS_MASTERY_KILLS,
   SKILL_POINTS_PER_LEVEL, STAMINA_SKILL_COST, CREW_SPEND_OPTIONS, HOSPITAL_HEAL_THRESHOLD,
 } from '../../../shared/gameData.js';
+import { isSupportedLocale, normalizeLocale } from '../../../shared/languages.js';
 import db, { isPostgres } from '../db/index.js';
 import { getEffectiveMobSize, getMobAllies, getUnreadPmCount } from './chatEngine.js';
 
@@ -1252,6 +1253,13 @@ export async function updateCustomAvatar(userId, dataUrl) {
   return { avatar_url: dataUrl };
 }
 
+export async function updatePlayerLocale(userId, locale) {
+  if (!isSupportedLocale(locale)) throw new Error('Unsupported language');
+  const code = normalizeLocale(locale);
+  await db.run('UPDATE players SET locale=? WHERE user_id=?', [code, userId]);
+  return { locale: code };
+}
+
 export async function getRevengeList(userId) {
   return db.all(`SELECT DISTINCT p.user_id, p.display_name, p.level, p.health, p.max_health,
     p.respect, p.mob_size,
@@ -1499,6 +1507,7 @@ export async function buildPlayerState(userId) {
     dailyMissions: missions, canClaimDaily,
     iced: player.iced_until && parseTime(player.iced_until) > Date.now(),
     referralCode: player.referral_code,
+    locale: normalizeLocale(player.locale || 'en'),
     avatar_url: avatarUrl(player),
     defaultAvatars: DEFAULT_AVATARS,
     goldStore: GODFATHER_STORE,
