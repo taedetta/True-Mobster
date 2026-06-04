@@ -14,6 +14,8 @@ export const HOSPITAL_HEAL_THRESHOLD = 0.6;
 /** iMobsters: property income auto-deposits every ~60 minutes */
 export const ECONOMY_TICK_MINUTES = 60;
 export const ECONOMY_TICK_MS = ECONOMY_TICK_MINUTES * 60 * 1000;
+/** Property hourly income multiplier (base tier curve × this) */
+export const PROPERTY_INCOME_MULTIPLIER = 5;
 export const BANK_FEE_PERCENT = 0.10;
 export const MISSION_MASTERY_THRESHOLDS = [10, 25, 50, 100];
 export const MISSION_MASTERY_MAX = 4;
@@ -183,7 +185,10 @@ export const PROPERTIES = tieredItems('p', [
   'Corner Store', 'Laundromat Front', 'Pool Hall', 'Underground Club', 'Storage Warehouse',
   'Casino Floor', 'Hotel Tower', 'Shipping Port', 'Skyline Tower', 'Empire HQ',
   'Oil Refinery', 'Media Conglomerate', 'Private Island', 'Satellite Network', 'World Bank Share',
-], 'income', 50, 5000, ['#84cc16', '#22d3ee', '#a3e635', '#c026d3', '#78716c', '#eab308', '#6366f1', '#0ea5e9', '#f97316', '#ef4444', '#854d0e', '#a855f7', '#06b6d4', '#8b5cf6', '#fbbf24']).map((p, i) => ({ ...p, income: p.income }));
+], 'income', 50, 5000, ['#84cc16', '#22d3ee', '#a3e635', '#c026d3', '#78716c', '#eab308', '#6366f1', '#0ea5e9', '#f97316', '#ef4444', '#854d0e', '#a855f7', '#06b6d4', '#8b5cf6', '#fbbf24']).map((p) => ({
+  ...p,
+  income: Math.floor(p.income * PROPERTY_INCOME_MULTIPLIER),
+}));
 
 export const CONSUMABLES = [
   { id: 'energy_pack', name: 'Energy Pack', price: 2500, goldPrice: 5, effect: 'energy', amount: 10, minLevel: 1, tier: 1, color: '#3b82f6' },
