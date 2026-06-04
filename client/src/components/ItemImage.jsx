@@ -6,7 +6,7 @@ const PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent(
 
 /** AI WebP thumbnails only — never falls back to legacy SVG art */
 export default function ItemImage({ src, alt, className = 'item-img', size = 'card', eager = false }) {
-  const sizeClass = size === 'list' ? 'item-img-sm' : size === 'hero' ? 'item-img-lg' : 'item-img';
+  const sizeClass = size === 'list' ? 'item-img-sm' : size === 'hero' ? 'item-img-lg' : size === 'banner' ? 'item-img-banner' : 'item-img';
   const [imgSrc, setImgSrc] = useState(src || PLACEHOLDER);
   const [failed, setFailed] = useState(false);
 
@@ -23,8 +23,8 @@ export default function ItemImage({ src, alt, className = 'item-img', size = 'ca
       loading={eager ? 'eager' : 'lazy'}
       decoding="async"
       fetchPriority={eager ? 'high' : 'auto'}
-      width={size === 'list' ? 80 : size === 'hero' ? 160 : 96}
-      height={size === 'list' ? 80 : size === 'hero' ? 160 : 96}
+      width={size === 'banner' ? 56 : size === 'list' ? 80 : size === 'hero' ? 160 : 96}
+      height={size === 'banner' ? 56 : size === 'list' ? 80 : size === 'hero' ? 160 : 96}
       onError={() => setFailed(true)}
     />
   );

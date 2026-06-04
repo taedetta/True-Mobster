@@ -37,6 +37,9 @@ export default function ShopPage() {
 
   if (!catalog || !state) return null;
 
+  const sellBack = catalog.sellBackRatio ?? 0.5;
+  const sellPct = catalog.sellBackPercent ?? 50;
+
   const isConsumable = tab === 'consumable';
   const shopItems = isConsumable
     ? (catalog.consumables || FALLBACK_CONSUMABLES)
@@ -50,8 +53,10 @@ export default function ShopPage() {
 
   const buy = (item, quantity) =>
     action('/buy', { itemId: item.id, category: tab, quantity }, `Purchased ${quantity}x ${item.name}!`);
-  const sell = (item, quantity) =>
-    action('/shop/sell', { itemId: item.id, category: tab, quantity }, `Sold ${quantity}x ${item.name}!`);
+  const sell = (item, quantity) => {
+    const payout = Math.floor((item.price || 0) * sellBack * quantity);
+    return action('/shop/sell', { itemId: item.id, category: tab, quantity }, `Sold ${quantity}x ${item.name} for ${formatMoney(payout)}!`);
+  };
   const useItem = (item) => action('/shop/use', { itemId: item.id }, `Used ${item.name}!`);
 
   const resolveItem = (inv) => {
@@ -65,7 +70,7 @@ export default function ShopPage() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="font-display text-lg text-mob-gold">Equipment</h2>
-          <p className="text-[10px] text-gray-500">Buy any quantity while you have cash</p>
+          <p className="text-[10px] text-gray-500">Buy in bulk · Sell owned gear for {sellPct}% of purchase price</p>
         </div>
         <span className="text-xs text-green-400 font-bold">{formatMoney(state.money)}</span>
       </div>
@@ -107,6 +112,7 @@ export default function ShopPage() {
                   playerMoney={state.money}
                   onSell={sell}
                   showSell
+                  sellBackRatio={sellBack}
                 />
                 {isConsumable && (
                   <button type="button" className="btn-primary text-xs w-full" onClick={() => useItem(item)}>Use 1</button>
@@ -138,6 +144,8 @@ export default function ShopPage() {
               playerLevel={state.level}
               playerMoney={state.money}
               onBuy={buy}
+              onSell={sell}
+              sellBackRatio={sellBack}
             />
           ))}
         </div>

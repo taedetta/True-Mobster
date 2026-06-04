@@ -23,7 +23,7 @@ import {
   ACHIEVEMENTS, DAILY_MISSIONS, DAILY_LOGIN_REWARDS, TERRITORIES, FIGHT_TYPES,
   itemThumbnailPath, GAME_NAME, STUDIO, MOB_RECRUIT_COST, MOB_MAX_SIZE, DEFAULT_AVATARS,
   COLLECTIONS, GODFATHER_STORE, GOLD_STORE, MOB_USABLE_PER_LEVEL, getMobBracket,
-  CREW_SPEND_OPTIONS, MISSION_MASTERY_THRESHOLDS, BANK_FEE_PERCENT,
+  CREW_SPEND_OPTIONS, MISSION_MASTERY_THRESHOLDS, BANK_FEE_PERCENT, SELL_BACK_RATIO,
 } from '../../../shared/gameData.js';
 
 const router = Router();
@@ -55,6 +55,8 @@ router.get('/catalog', wrap(async () => {
     goldStore: GODFATHER_STORE,
     godfatherStore: GODFATHER_STORE,
     mobUsablePerLevel: MOB_USABLE_PER_LEVEL,
+    sellBackRatio: SELL_BACK_RATIO,
+    sellBackPercent: Math.round(SELL_BACK_RATIO * 100),
   };
 }));
 

@@ -172,12 +172,14 @@ export function PlayerHeader({ state }) {
 
 
 
-export function ShopItemCard({ item, ownedQty = 0, playerLevel, playerMoney, onBuy, onSell, showSell = false }) {
+export function ShopItemCard({ item, ownedQty = 0, playerLevel, playerMoney, onBuy, onSell, showSell = false, sellBackRatio = 0.5 }) {
   const [qty, setQty] = useState(1);
   const unitPrice = item.price || 0;
+  const sellUnit = Math.floor(unitPrice * sellBackRatio);
   const maxBuy = unitPrice > 0 ? Math.floor(playerMoney / unitPrice) : 0;
   const maxQty = showSell ? ownedQty : maxBuy;
   const canBuy = playerLevel >= item.minLevel && maxBuy >= 1;
+  const canSell = ownedQty > 0 && onSell;
   const statLabel = item.attack ? `+${item.attack} ATK` : item.defense ? `+${item.defense} DEF` : item.income ? `$${item.income}/hr` : '';
   const upkeepLabel = item.upkeep > 0 ? `$${item.upkeep}/hr upkeep` : '';
 
@@ -196,7 +198,10 @@ export function ShopItemCard({ item, ownedQty = 0, playerLevel, playerMoney, onB
       <h3 className="font-semibold text-sm text-gray-100 leading-tight px-1">{item.name}</h3>
       <p className="text-xs text-mob-gold mt-1 font-medium">{statLabel}</p>
       {upkeepLabel && <p className="text-xs text-red-400">{upkeepLabel}</p>}
-      <p className="text-xs text-gray-500 mt-1">Lv.{item.minLevel}+ · {formatMoney(unitPrice)} each</p>
+      <p className="text-xs text-gray-500 mt-1">Lv.{item.minLevel}+ · Buy {formatMoney(unitPrice)}</p>
+      {sellUnit > 0 && (
+        <p className="text-[10px] text-amber-500/90 mt-0.5">Sell {formatMoney(sellUnit)} each ({Math.round(sellBackRatio * 100)}% back)</p>
+      )}
 
       <div className="w-full mt-3 space-y-2">
         <div className="flex items-center gap-1">
@@ -216,13 +221,22 @@ export function ShopItemCard({ item, ownedQty = 0, playerLevel, playerMoney, onB
           ))}
         </div>
         {showSell ? (
-          <button type="button" className="btn-secondary text-xs w-full" disabled={!ownedQty} onClick={() => onSell?.(item, qty)}>
-            Sell {qty} · {formatMoney(Math.floor(unitPrice * 0.5 * qty))}
+          <button type="button" className="btn-secondary text-xs w-full" disabled={!canSell} onClick={() => onSell?.(item, qty)}>
+            Sell {qty} · {formatMoney(sellUnit * qty)}
           </button>
         ) : (
-          <button type="button" className="btn-primary text-xs w-full" disabled={!canBuy} onClick={() => onBuy?.(item, qty)}>
-            Buy {qty} · {formatMoney(unitPrice * qty)}
-          </button>
+          <>
+            {onBuy && (
+              <button type="button" className="btn-primary text-xs w-full" disabled={!canBuy} onClick={() => onBuy?.(item, qty)}>
+                Buy {qty} · {formatMoney(unitPrice * qty)}
+              </button>
+            )}
+            {canSell && (
+              <button type="button" className="btn-secondary text-xs w-full" onClick={() => onSell(item, Math.min(qty, ownedQty))}>
+                Sell {Math.min(qty, ownedQty)} · {formatMoney(sellUnit * Math.min(qty, ownedQty))}
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

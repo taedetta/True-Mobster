@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { formatMoney } from '../api';
-import { uiAsset } from '../utils/assets';
 import ItemImage from '../components/ItemImage';
 
 const PRIMARY = [
@@ -69,11 +68,11 @@ export default function HomePage() {
           <div className="imob-banner-weapon">
             {weapon ? (
               <>
-                <ItemImage src={weapon.thumbnail} alt={weapon.name} size="list" eager />
-                <p className="text-[9px] text-gray-400 mt-1 leading-tight text-center max-w-[72px]">{weapon.name}</p>
+                <ItemImage src={weapon.thumbnail} alt={weapon.name} size="banner" eager />
+                <p className="text-[9px] text-gray-400 mt-1 leading-tight text-center max-w-[76px] line-clamp-2">{weapon.name}</p>
               </>
             ) : (
-              <p className="text-[10px] text-gray-500">No weapon</p>
+              <p className="text-[10px] text-gray-500 text-center">No weapon</p>
             )}
           </div>
 
@@ -81,7 +80,7 @@ export default function HomePage() {
             <img
               src={state.avatar_url || '/assets/avatars/default_01.svg'}
               alt=""
-              className="w-20 h-24 object-cover rounded border-2 border-yellow-800/60 bg-black mx-auto"
+              className="banner-portrait"
             />
             <div className="imob-code-banner mt-2">
               <button type="button" onClick={copyCode} className="font-mono text-sm font-bold text-white tracking-widest">
@@ -133,7 +132,7 @@ export default function HomePage() {
             <p className="text-xs text-gray-500 py-2 text-center">No news yet — fight rivals to make headlines!</p>
           )}
           {news.map((n) => (
-            <div key={n.id} className="py-2 border-b border-red-950/40 last:border-0">
+            <div key={n.id} className="py-2 border-b border-yellow-950/40 last:border-0">
               <p className="text-xs text-gray-200">{n.body || n.content || n.message || n.title}</p>
               {n.created_at && (
                 <p className="text-[9px] text-gray-600 mt-0.5">{new Date(n.created_at).toLocaleString()}</p>
@@ -141,13 +140,13 @@ export default function HomePage() {
             </div>
           ))}
           {news.length > 0 && (
-            <Link to="/news" className="block text-center text-[10px] text-red-400 pt-2">View all news →</Link>
+            <Link to="/news" className="block text-center text-[10px] text-yellow-400 pt-2">View all news →</Link>
           )}
         </div>
       </div>
 
       <p className="text-[9px] text-center text-gray-600 pb-2">
-        True Mobsters v2.6.4 · VisionIt Studio
+        True Mobsters v2.6.5 · VisionIt Studio
       </p>
     </div>
   );

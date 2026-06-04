@@ -16,16 +16,21 @@ export default function EstatePage() {
   );
   const eco = state.economy || {};
 
+  const sellBack = catalog.sellBackRatio ?? 0.5;
+  const sellPct = catalog.sellBackPercent ?? 50;
+
   const buy = (item, quantity) =>
     action('/buy', { itemId: item.id, category: 'property', quantity }, `Purchased ${quantity}x ${item.name}!`);
-  const sell = (item, quantity) =>
-    action('/shop/sell', { itemId: item.id, category: 'property', quantity }, `Sold ${quantity}x ${item.name}!`);
+  const sell = (item, quantity) => {
+    const payout = Math.floor((item.price || 0) * sellBack * quantity);
+    return action('/shop/sell', { itemId: item.id, category: 'property', quantity }, `Sold ${quantity}x ${item.name} for ${formatMoney(payout)}!`);
+  };
 
   return (
     <div className="space-y-4">
       <div>
         <h2 className="font-display text-lg text-mob-gold">Real Estate</h2>
-        <p className="text-[10px] text-gray-500">Income auto-deposits every hour — no collect button</p>
+        <p className="text-[10px] text-gray-500">Income auto-deposits every hour · Sell properties for {sellPct}% back</p>
       </div>
 
       <div className="card border-red-900/40">
@@ -57,6 +62,7 @@ export default function EstatePage() {
             playerMoney={state.money}
             onBuy={buy}
             onSell={sell}
+            sellBackRatio={sellBack}
           />
         ))}
       </div>

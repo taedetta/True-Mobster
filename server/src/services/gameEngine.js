@@ -1435,7 +1435,11 @@ export async function buildPlayerState(userId) {
     goldStore: GODFATHER_STORE,
     godfatherStore: GODFATHER_STORE,
     favor_points: player.gold || 0,
-    equippedWeapon: weaponDisplay ? { id: weaponDisplay.id, name: weaponDisplay.name, thumbnail: itemThumbnailPath(weaponDisplay) } : null,
+    equippedWeapon: weaponDisplay ? {
+      id: weaponDisplay.id,
+      name: weaponDisplay.name,
+      thumbnail: itemThumbnailPath('weapon', weaponDisplay.id),
+    } : null,
   };
 }
 

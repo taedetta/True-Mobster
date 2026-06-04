@@ -87,6 +87,9 @@
   .item-img-lg {
     @apply w-40 h-40 rounded-xl object-contain bg-black border border-yellow-950/50 p-1 shadow-item;
   }
+  .item-img-banner {
+    @apply w-14 h-14 rounded object-contain bg-black/60 border border-yellow-900/40 p-0.5 flex-shrink-0;
+  }
 
   .glass-header {
     @apply sticky top-0 z-40 bg-black/90 backdrop-blur-xl border-b border-yellow-900/50;
@@ -132,9 +135,13 @@
     background-position: bottom;
   }
 
-  .imob-banner-weapon { @apply flex flex-col items-center justify-end w-[80px] flex-shrink-0; }
+  .imob-banner-weapon { @apply flex flex-col items-center justify-end w-[80px] flex-shrink-0 min-h-[72px]; }
   .imob-banner-center { @apply flex-1 flex flex-col items-center justify-center px-2; }
   .imob-banner-right { @apply w-[90px] flex-shrink-0 flex flex-col justify-between py-1; }
+
+  .banner-portrait {
+    @apply w-[72px] h-[88px] object-contain object-top mx-auto rounded bg-black/80 border-2 border-yellow-800/60;
+  }
 
   .imob-code-banner {
     @apply px-4 py-1 rounded;
