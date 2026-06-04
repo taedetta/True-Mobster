@@ -72,7 +72,7 @@ app.use('/assets/avatars', express.static(path.join(__dirname, '../../client/pub
 }));
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', game: GAME_NAME, studio: STUDIO, version: '2.7.1', deployedAt: new Date().toISOString() });
+  res.json({ status: 'ok', game: GAME_NAME, studio: STUDIO, version: '2.8.0', deployedAt: new Date().toISOString() });
 });
 
 app.use('/api/auth', authRoutes);

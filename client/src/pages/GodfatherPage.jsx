@@ -18,6 +18,12 @@ export default function GodfatherPage() {
 
   const maxQty = (pack) => Math.max(1, Math.floor(favor / pack.favorCost));
 
+  const gearItem = (pack) => {
+    if (pack.effect !== 'gear' || !pack.itemId) return null;
+    const key = pack.category === 'weapon' ? 'weapons' : pack.category === 'armor' ? 'armor' : pack.category === 'vehicle' ? 'vehicles' : 'consumables';
+    return catalog?.[key]?.find((i) => i.id === pack.itemId);
+  };
+
   const buy = (pack) => {
     const qty = getQty(pack.id);
     action('/godfather/buy', { packId: pack.id, quantity: qty }, `Traded ${qty}x ${pack.name} with the Godfather!`);
@@ -31,7 +37,7 @@ export default function GodfatherPage() {
           <p className="text-[10px] uppercase tracking-[0.2em] text-mob-gold/80">Specialty Shop</p>
           <h2 className="font-display text-xl text-mob-gold">The Godfather</h2>
           <p className="text-xs text-gray-400 mt-1">
-            Trade Favor Points for refills, hired guns, cash, and elite bonuses.
+            Trade Favor Points for refills, hired guns, cash, and exclusive equipment.
           </p>
           <p className="text-lg font-bold text-red-300 mt-2">{favor} Favor Points</p>
           <p className="text-[10px] text-gray-500">Earn favor from jobs, daily login & achievements</p>
@@ -43,14 +49,25 @@ export default function GodfatherPage() {
           const qty = getQty(pack.id);
           const cost = pack.favorCost * qty;
           const max = maxQty(pack);
+          const gear = gearItem(pack);
+          const statParts = [];
+          if (gear?.attack > 0) statParts.push(`+${gear.attack} ATK`);
+          if (gear?.defense > 0) statParts.push(`+${gear.defense} DEF`);
+          const levelOk = !pack.minLevel || state.level >= pack.minLevel;
           return (
-            <div key={pack.id} className="card space-y-3">
+            <div key={pack.id} className={`card space-y-3 ${!levelOk ? 'opacity-60' : ''}`}>
               <div className="flex justify-between items-start gap-3">
                 <div>
                   <p className="font-semibold text-sm">{pack.icon} {pack.name}</p>
-                  <p className="text-xs text-gray-400">{pack.favorCost} favor each</p>
+                  <p className="text-xs text-gray-400">{pack.favorCost} favor each · qty {(pack.qty || 1) * qty}</p>
                   {pack.effect === 'cash' && <p className="text-xs text-green-400">≈ {formatMoney((pack.cashPerLevel || 500) * state.level * qty)}</p>}
                   {pack.effect === 'mob' && <p className="text-xs text-red-300">+{(pack.amount || 1) * qty} mob</p>}
+                  {pack.effect === 'gear' && statParts.length > 0 && (
+                    <p className="text-xs text-mob-gold">{statParts.join(' · ')}</p>
+                  )}
+                  {pack.minLevel > 1 && (
+                    <p className={`text-[10px] mt-0.5 ${levelOk ? 'text-gray-500' : 'text-red-400'}`}>Lv.{pack.minLevel}+ required</p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -71,7 +88,7 @@ export default function GodfatherPage() {
                 <button
                   type="button"
                   className="btn-primary text-xs ml-auto flex-shrink-0"
-                  disabled={favor < cost}
+                  disabled={favor < cost || !levelOk}
                   onClick={() => buy(pack)}
                 >
                   Trade {cost} favor

@@ -9,7 +9,8 @@ import {
   DAILY_GIFTS_MAX, REFERRAL_BONUS, COLLECTIONS, BOT_NAMES, BASE_STATS, STAT_GROWTH_PER_LEVEL,
   generateReferralCode, GOLD_JOB_CHANCE, PROPERTY_MAX_STACK, DEFAULT_AVATARS, avatarUrl,
   MOB_USABLE_PER_LEVEL, getMobBracket, GODFATHER_STORE, GOLD_STORE, ECONOMY_TICK_MS, getItemById,
-  ITEM_MAX_STACK, FIGHT_GEAR_LOSS_RATE, itemThumbnailPath, JOB_LOOT,
+  ITEM_MAX_STACK, FIGHT_GEAR_LOSS_RATE, itemThumbnailPath, JOB_LOOT, JOB_RANDOM_GEAR_CHANCE,
+  pickRandomJobGearDrop,
   calcFightAttackPower, calcFightDefensePower,
   resolveFightRoll, rollFightXp, rollFightRespect, rollFightMoneySteal, rollFightMoneyLost, rollFightDamage,
   rollMissionXp, rollMissionMoney, hitlistMinBounty, hitlistKillerBonus,
@@ -196,7 +197,7 @@ export async function getTerritoryBonusForCrew(crewId) {
   return bonus;
 }
 
-function allocateGearForFight(inventory, category, catalog, statKey, usableMob) {
+function allocateGearForFight(inventory, category, catalog, sortKey, usableMob) {
   const rows = (inventory || []).filter((i) => i.category === category);
   const items = rows
     .map((r) => {
@@ -204,30 +205,38 @@ function allocateGearForFight(inventory, category, catalog, statKey, usableMob) 
       return def ? { ...def, qty: Number(r.quantity || 1) } : null;
     })
     .filter(Boolean)
-    .sort((a, b) => (b[statKey] || 0) - (a[statKey] || 0));
+    .sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0));
 
   let remaining = usableMob;
-  let total = 0;
+  let attackTotal = 0;
+  let defenseTotal = 0;
   const used = [];
   for (const item of items) {
     if (remaining <= 0) break;
     const qtyUsed = Math.min(remaining, item.qty);
-    total += (item[statKey] || 0) * qtyUsed;
+    const atk = item.attack || 0;
+    const def = item.defense || 0;
+    attackTotal += atk * qtyUsed;
+    defenseTotal += def * qtyUsed;
     remaining -= qtyUsed;
     used.push({
       id: item.id,
       name: item.name,
       qtyUsed,
-      stat: item[statKey] || 0,
+      attack: atk,
+      defense: def,
+      stat: item[sortKey] || 0,
       category,
       thumbnail: itemThumbnailPath(category, item.id),
     });
   }
-  return { total, items: used, mobUsed: usableMob - remaining };
-}
-
-function calcGearStat(inventory, category, catalog, statKey, usableMob) {
-  return allocateGearForFight(inventory, category, catalog, statKey, usableMob).total;
+  return {
+    total: sortKey === 'attack' ? attackTotal : defenseTotal,
+    attackTotal,
+    defenseTotal,
+    items: used,
+    mobUsed: usableMob - remaining,
+  };
 }
 
 function buildFightSideReport(player, inventory, crewMemberCount) {
@@ -239,12 +248,14 @@ function buildFightSideReport(player, inventory, crewMemberCount) {
   const weapons = allocateGearForFight(inventory, 'weapon', WEAPONS, 'attack', usableMob);
   const armor = allocateGearForFight(inventory, 'armor', ARMOR, 'defense', usableMob);
   const vehicles = allocateGearForFight(inventory, 'vehicle', VEHICLES, 'defense', usableMob);
-  const mobAttack = weapons.total;
-  const mobArmor = armor.total;
-  const mobVehicle = vehicles.total;
-  const gearDefense = mobArmor + mobVehicle;
+  let gearAttack = 0;
+  let gearDefense = 0;
+  for (const group of [weapons, armor, vehicles]) {
+    gearAttack += group.attackTotal;
+    gearDefense += group.defenseTotal;
+  }
   const fightAttack = calcFightAttackPower({
-    gearAttack: mobAttack,
+    gearAttack,
     level: player.level,
     skillPoints: player.attack_skill || 0,
     colBonus: colBonus.attack,
@@ -274,7 +285,13 @@ function buildFightSideReport(player, inventory, crewMemberCount) {
     weapons: weapons.items,
     armor: armor.items,
     vehicles: vehicles.items,
-    gearTotals: { weapons: mobAttack, armor: mobArmor, vehicles: mobVehicle },
+    gearTotals: {
+      attack: gearAttack,
+      defense: gearDefense,
+      weapons: weapons.attackTotal,
+      armor: armor.defenseTotal,
+      vehicles: vehicles.defenseTotal,
+    },
   };
 }
 
@@ -408,14 +425,21 @@ async function grantInventoryItem(userId, itemId, category, qty = 1) {
   return { id: item.id, name: item.name, category, qty, thumbnail: itemThumbnailPath(category, itemId) };
 }
 
-function rollJobLoot(job) {
+function rollJobLoot(job, playerLevel) {
   const pool = JOB_LOOT[job.artSlug] || JOB_LOOT.default || [];
   const drops = [];
+  const lootMult = 1 + (job.lootChance || 0.15) * 0.5;
   for (const entry of pool) {
-    if (Math.random() < entry.chance) {
+    const item = getCatalogItem(entry.itemId, entry.category);
+    if (item && (item.minLevel || 1) > playerLevel) continue;
+    if (Math.random() < Math.min(0.95, entry.chance * lootMult)) {
       const qty = entry.qty ? randomInt(entry.qty[0], entry.qty[1]) : 1;
       drops.push({ itemId: entry.itemId, category: entry.category, qty });
     }
+  }
+  if (Math.random() < (job.lootChance || 0.15) * JOB_RANDOM_GEAR_CHANCE * 3) {
+    const rnd = pickRandomJobGearDrop(playerLevel);
+    if (rnd) drops.push(rnd);
   }
   return drops;
 }
@@ -486,7 +510,7 @@ export async function doJob(userId, jobId) {
     money = rollMissionMoney(player.level, job.money, masteryBonus.moneyMult);
     xp = rollMissionXp(player.level, job.xp, masteryBonus.xpMult);
     if (Math.random() < GOLD_JOB_CHANCE) goldEarned = randomInt(1, 3) + masteryBonus.favorBonus;
-    for (const drop of rollJobLoot(job)) {
+    for (const drop of rollJobLoot(job, player.level)) {
       const granted = await grantInventoryItem(userId, drop.itemId, drop.category, drop.qty);
       if (granted) loot.push(granted);
     }
@@ -1219,6 +1243,13 @@ export async function buyGodfatherItem(userId, packId, quantity = 1) {
     await db.run('UPDATE players SET iced_until=? WHERE user_id=?',
       [new Date(Date.now() + hours * 3600000).toISOString(), userId]);
     return { pack, quantity: qty, favorSpent: totalCost };
+  }
+  if (pack.effect === 'gear') {
+    if (player.level < (pack.minLevel || 1)) throw new Error(`Need level ${pack.minLevel} for this item`);
+    const grantQty = (pack.qty || 1) * qty;
+    const granted = await grantInventoryItem(userId, pack.itemId, pack.category, grantQty);
+    if (!granted) throw new Error('Could not grant item');
+    return { pack, quantity: qty, favorSpent: totalCost, granted };
   }
   throw new Error('Unknown Godfather item');
 }

@@ -24,7 +24,12 @@ function MobGearIcons({ side, label }) {
           <div key={`${item.id}-${item.kind}`} className="text-center">
             <ItemImage src={item.thumbnail} alt={item.name} size="list" eager />
             <p className="text-[9px] text-gray-500 truncate max-w-[72px]">{item.name}</p>
-            <p className="text-[9px] text-gray-500">x{item.qtyUsed || 1}</p>
+            <p className="text-[9px] text-gray-500">
+              {(item.attack > 0 || item.defense > 0)
+                ? `${item.attack ? `${item.attack}A` : ''}${item.attack && item.defense ? '/' : ''}${item.defense ? `${item.defense}D` : ''}`
+                : `x${item.qtyUsed || 1}`}
+            </p>
+            <p className="text-[9px] text-gray-600">×{item.qtyUsed || 1} mob</p>
           </div>
         ))}
       </div>

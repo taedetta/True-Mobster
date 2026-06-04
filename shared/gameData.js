@@ -107,25 +107,26 @@ const JOB_TEMPLATES = [
   ['syndicate_hit', 'Syndicate Hit', 10, [4000, 7000], 190, 0.3, 35],
 ];
 
-const JOB_REQUIREMENTS = {
+/** iMobsters: many missions require specific gear you own (not consumed). */
+export const JOB_REQUIREMENTS = {
   pickpocket: { minMob: 1, items: [] },
   mug_runners: { minMob: 2, items: [{ itemId: 'w_rusty_knife', category: 'weapon', qty: 1 }] },
   fence_goods: { minMob: 3, items: [{ itemId: 'w_baseball_bat', category: 'weapon', qty: 1 }] },
-  extortion: { minMob: 4, items: [{ itemId: 'w_switchblade', category: 'weapon', qty: 1 }] },
-  warehouse: { minMob: 5, items: [{ itemId: 'a_leather_jacket', category: 'armor', qty: 1 }] },
-  truck_jack: { minMob: 6, items: [{ itemId: 'v_beaten_sedan', category: 'vehicle', qty: 1 }] },
-  dock_smuggle: { minMob: 8, items: [{ itemId: 'w_street_revolver', category: 'weapon', qty: 1 }] },
-  counterfeit: { minMob: 10, items: [{ itemId: 'a_kevlar_vest', category: 'armor', qty: 1 }] },
-  nightclub: { minMob: 12, items: [{ itemId: 'v_muscle_car', category: 'vehicle', qty: 1 }] },
-  insider_trade: { minMob: 15, items: [{ itemId: 'w_brass_knuckles', category: 'weapon', qty: 1 }] },
-  casino_scam: { minMob: 18, items: [{ itemId: 'w_compact_smg', category: 'weapon', qty: 1 }] },
-  art_heist: { minMob: 20, items: [{ itemId: 'a_tactical_vest', category: 'armor', qty: 1 }] },
-  penthouse: { minMob: 25, items: [{ itemId: 'v_armored_suv', category: 'vehicle', qty: 1 }] },
-  bank_job: { minMob: 30, items: [{ itemId: 'w_tactical_rifle', category: 'weapon', qty: 1 }] },
-  arms_deal: { minMob: 35, items: [{ itemId: 'w_assault_rifle', category: 'weapon', qty: 1 }] },
-  hostile_takeover: { minMob: 40, items: [{ itemId: 'a_elite_body_armor', category: 'armor', qty: 1 }] },
-  diamond_run: { minMob: 45, items: [{ itemId: 'v_executive_limo', category: 'vehicle', qty: 1 }] },
-  syndicate_hit: { minMob: 50, items: [{ itemId: 'w_long_range_sniper', category: 'weapon', qty: 1 }] },
+  extortion: { minMob: 4, items: [{ itemId: 'w_switchblade', category: 'weapon', qty: 1 }, { itemId: 'a_leather_jacket', category: 'armor', qty: 1 }] },
+  warehouse: { minMob: 5, items: [{ itemId: 'a_leather_jacket', category: 'armor', qty: 1 }, { itemId: 'w_brass_knuckles', category: 'weapon', qty: 1 }] },
+  truck_jack: { minMob: 6, items: [{ itemId: 'v_beaten_sedan', category: 'vehicle', qty: 1 }, { itemId: 'w_street_revolver', category: 'weapon', qty: 1 }] },
+  dock_smuggle: { minMob: 8, items: [{ itemId: 'w_street_revolver', category: 'weapon', qty: 1 }, { itemId: 'v_muscle_car', category: 'vehicle', qty: 1 }] },
+  counterfeit: { minMob: 10, items: [{ itemId: 'a_kevlar_vest', category: 'armor', qty: 1 }, { itemId: 'w_sawed_off_shotgun', category: 'weapon', qty: 1 }] },
+  nightclub: { minMob: 12, items: [{ itemId: 'v_muscle_car', category: 'vehicle', qty: 1 }, { itemId: 'a_street_helmet', category: 'armor', qty: 1 }] },
+  insider_trade: { minMob: 15, items: [{ itemId: 'w_compact_smg', category: 'weapon', qty: 1 }, { itemId: 'a_tactical_vest', category: 'armor', qty: 1 }] },
+  casino_scam: { minMob: 18, items: [{ itemId: 'w_compact_smg', category: 'weapon', qty: 1 }, { itemId: 'v_speedboat', category: 'vehicle', qty: 1 }] },
+  art_heist: { minMob: 20, items: [{ itemId: 'a_tactical_vest', category: 'armor', qty: 1 }, { itemId: 'w_tactical_rifle', category: 'weapon', qty: 1 }] },
+  penthouse: { minMob: 25, items: [{ itemId: 'v_armored_suv', category: 'vehicle', qty: 1 }, { itemId: 'w_assault_rifle', category: 'weapon', qty: 1 }, { itemId: 'a_riot_gear', category: 'armor', qty: 1 }] },
+  bank_job: { minMob: 30, items: [{ itemId: 'w_tactical_rifle', category: 'weapon', qty: 1 }, { itemId: 'a_ballistic_suit', category: 'armor', qty: 1 }] },
+  arms_deal: { minMob: 35, items: [{ itemId: 'w_assault_rifle', category: 'weapon', qty: 1 }, { itemId: 'v_armored_suv', category: 'vehicle', qty: 1 }] },
+  hostile_takeover: { minMob: 40, items: [{ itemId: 'a_elite_body_armor', category: 'armor', qty: 1 }, { itemId: 'w_combat_shotgun', category: 'weapon', qty: 1 }] },
+  diamond_run: { minMob: 45, items: [{ itemId: 'v_executive_limo', category: 'vehicle', qty: 1 }, { itemId: 'w_long_range_sniper', category: 'weapon', qty: 1 }] },
+  syndicate_hit: { minMob: 50, items: [{ itemId: 'w_long_range_sniper', category: 'weapon', qty: 1 }, { itemId: 'a_warlord_plate', category: 'armor', qty: 1 }, { itemId: 'v_private_helicopter', category: 'vehicle', qty: 1 }] },
 };
 
 export const JOBS = LOCATIONS.flatMap((loc, li) =>
@@ -161,25 +162,57 @@ function tieredItems(category, names, statKey, baseStat, basePrice, colors, { ba
   }));
 }
 
-export const WEAPONS = tieredItems('w', [
+/** iMobsters-style gear: weapons & vehicles can have ATK+DEF; armor always DEF > ATK. */
+function imobTieredGear(prefix, names, type, baseAtk, baseDef, basePrice, colors, { baseUpkeep = 0 } = {}) {
+  return names.map((name, i) => {
+    const scale = 1 + i * 0.55;
+    let attack = Math.floor(baseAtk * scale);
+    let defense = Math.floor(baseDef * scale);
+    if (type === 'weapon') {
+      const defMult = [0, 0.5, 0, 0.2, 0.15, 0.67, 0.18, 0.28, 0.22, 0.42, 0.35, 0.2, 0.12, 0.1, 0.28, 0.22, 0.18, 0.15, 0.12, 0.2][i] ?? 0.15;
+      if (baseDef <= 0) defense = Math.max(0, Math.floor(attack * defMult));
+      if (i === 1) attack = Math.max(attack, defense);
+    } else if (type === 'armor') {
+      defense = Math.max(defense, Math.floor(baseDef * scale) || 2);
+      attack = Math.max(0, Math.floor(defense * 0.32));
+      if (defense <= attack) defense = attack + Math.max(1, Math.floor(attack * 0.55));
+    } else if (type === 'vehicle') {
+      attack = Math.max(1, attack);
+      defense = Math.max(defense, Math.floor(attack * 1.12) + (i > 2 ? 1 : 0));
+    }
+    return {
+      id: `${prefix}_${name.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`,
+      name,
+      attack,
+      defense,
+      price: Math.floor(basePrice * Math.pow(1.75, i)),
+      minLevel: 1 + i * 4,
+      tier: Math.min(5, 1 + Math.floor(i / 4)),
+      color: colors[i % colors.length],
+      upkeep: baseUpkeep ? Math.floor(baseUpkeep * Math.pow(1.35, i)) : 0,
+    };
+  });
+}
+
+export const WEAPONS = imobTieredGear('w', [
   'Rusty Knife', 'Baseball Bat', 'Switchblade', 'Brass Knuckles', 'Street Revolver',
   'Sawed-Off Shotgun', 'Compact SMG', 'Tactical Rifle', 'Assault Rifle', 'Combat Shotgun',
   'Long-Range Sniper', 'Dual Pistols', 'Golden Pistol', 'Plasma Cutter', 'Boss Cannon',
   'War Hammer', 'Shadow Blade', 'Empire Destroyer', 'Annihilator', 'Godfather Special',
-], 'attack', 2, 500, ['#94a3b8', '#b45309', '#64748b', '#78716c', '#475569', '#78350f', '#1e293b', '#14532d', '#166534', '#312e81', '#581c87', '#ca8a04', '#eab308', '#7f1d1d', '#450a0a', '#44403c', '#0f172a', '#991b1b', '#701a75', '#fbbf24'], { baseUpkeep: 4 });
+], 'weapon', 2, 0, 500, ['#94a3b8', '#b45309', '#64748b', '#78716c', '#475569', '#78350f', '#1e293b', '#14532d', '#166534', '#312e81', '#581c87', '#ca8a04', '#eab308', '#7f1d1d', '#450a0a', '#44403c', '#0f172a', '#991b1b', '#701a75', '#fbbf24'], { baseUpkeep: 4 });
 
-export const ARMOR = tieredItems('a', [
+export const ARMOR = imobTieredGear('a', [
   'Leather Jacket', 'Kevlar Vest', 'Street Helmet', 'Tactical Vest', 'Riot Gear',
   'Ballistic Suit', 'Elite Body Armor', 'Warlord Plate', 'Phantom Suit', 'Empire Guard',
   'Dragon Scale', 'Titan Plate', 'Shadow Cloak', 'Invincible Mesh', 'Emperor Mantle',
   'Fortress Shell', 'Aegis Suit', 'Void Armor', 'Immortal Guard', 'Legend Plate',
-], 'defense', 2, 800, ['#44403c', '#57534e', '#334155', '#166534', '#1e3a8a', '#374151', '#581c87', '#713f12', '#0f172a', '#991b1b', '#7c2d12', '#1e40af', '#312e81', '#134e4a', '#854d0e', '#44403c', '#0369a1', '#4c1d95', '#881337', '#fbbf24'], { baseUpkeep: 6 });
+], 'armor', 0, 2, 800, ['#44403c', '#57534e', '#334155', '#166534', '#1e3a8a', '#374151', '#581c87', '#713f12', '#0f172a', '#991b1b', '#7c2d12', '#1e40af', '#312e81', '#134e4a', '#854d0e', '#44403c', '#0369a1', '#4c1d95', '#881337', '#fbbf24'], { baseUpkeep: 6 });
 
-export const VEHICLES = tieredItems('v', [
+export const VEHICLES = imobTieredGear('v', [
   'Beaten Sedan', 'Muscle Car', 'Armored SUV', 'Speedboat', 'Executive Limo',
   'Private Helicopter', 'Luxury Yacht', 'Private Jet', 'Tank Limo', 'Stealth Bike',
   'War Rig', 'Submarine', 'Orbital Shuttle', 'Mobile Fortress', 'Ghost Train',
-], 'defense', 1, 2000, ['#71717a', '#dc2626', '#1f2937', '#0284c7', '#18181b', '#0369a1', '#f5f5f4', '#e2e8f0', '#422006', '#09090b', '#7f1d1d', '#164e63', '#6366f1', '#374151', '#78350f'], { baseUpkeep: 20 });
+], 'vehicle', 1, 1, 2000, ['#71717a', '#dc2626', '#1f2937', '#0284c7', '#18181b', '#0369a1', '#f5f5f4', '#e2e8f0', '#422006', '#09090b', '#7f1d1d', '#164e63', '#6366f1', '#374151', '#78350f'], { baseUpkeep: 20 });
 
 export const PROPERTIES = tieredItems('p', [
   'Corner Store', 'Laundromat Front', 'Pool Hall', 'Underground Club', 'Storage Warehouse',
@@ -307,26 +340,101 @@ export function getItemById(id) {
   return ALL_ITEMS.find((i) => i.id === id) || JOBS.find((j) => j.id === id) || LOCATIONS.find((l) => l.id === id) || BOSSES.find((b) => b.id === id);
 }
 
-/** iMobsters-style job loot drops by job type (artSlug) */
+/** iMobsters-style job loot — fixed drops + random gear only at/below player level. */
 export const JOB_LOOT = {
-  pickpocket: [{ itemId: 'w_rusty_knife', category: 'weapon', chance: 0.1, qty: [1, 1] }],
-  mug_runners: [{ itemId: 'w_baseball_bat', category: 'weapon', chance: 0.08, qty: [1, 1] }],
-  fence_goods: [{ itemId: 'a_leather_jacket', category: 'armor', chance: 0.07, qty: [1, 1] }],
-  extortion: [{ itemId: 'w_switchblade', category: 'weapon', chance: 0.06, qty: [1, 1] }, { itemId: 'consumable_stamina_drink', category: 'consumable', chance: 0.05, qty: [1, 1] }],
-  warehouse: [{ itemId: 'a_kevlar_vest', category: 'armor', chance: 0.06, qty: [1, 1] }],
-  truck_jack: [{ itemId: 'v_beaten_sedan', category: 'vehicle', chance: 0.05, qty: [1, 1] }],
-  dock_smuggle: [{ itemId: 'v_speedboat', category: 'vehicle', chance: 0.04, qty: [1, 1] }],
-  counterfeit: [{ itemId: 'w_street_revolver', category: 'weapon', chance: 0.05, qty: [1, 1] }],
-  nightclub: [{ itemId: 'consumable_energy_pack', category: 'consumable', chance: 0.08, qty: [1, 2] }],
-  bank_job: [{ itemId: 'w_compact_smg', category: 'weapon', chance: 0.04, qty: [1, 1] }],
-  arms_deal: [{ itemId: 'w_tactical_rifle', category: 'weapon', chance: 0.03, qty: [1, 1] }],
-  hostile_takeover: [{ itemId: 'a_tactical_vest', category: 'armor', chance: 0.03, qty: [1, 1] }],
-  diamond_run: [{ itemId: 'v_executive_limo', category: 'vehicle', chance: 0.02, qty: [1, 1] }],
-  syndicate_hit: [{ itemId: 'w_assault_rifle', category: 'weapon', chance: 0.02, qty: [1, 1] }],
-  default: [{ itemId: 'consumable_health_kit', category: 'consumable', chance: 0.03, qty: [1, 1] }],
+  pickpocket: [
+    { itemId: 'w_rusty_knife', category: 'weapon', chance: 0.12, qty: [1, 1] },
+    { itemId: 'stamina_drink', category: 'consumable', chance: 0.06, qty: [1, 1] },
+  ],
+  mug_runners: [
+    { itemId: 'w_baseball_bat', category: 'weapon', chance: 0.1, qty: [1, 1] },
+    { itemId: 'w_switchblade', category: 'weapon', chance: 0.05, qty: [1, 1] },
+  ],
+  fence_goods: [
+    { itemId: 'a_leather_jacket', category: 'armor', chance: 0.09, qty: [1, 1] },
+    { itemId: 'w_brass_knuckles', category: 'weapon', chance: 0.06, qty: [1, 1] },
+  ],
+  extortion: [
+    { itemId: 'w_switchblade', category: 'weapon', chance: 0.08, qty: [1, 1] },
+    { itemId: 'stamina_drink', category: 'consumable', chance: 0.07, qty: [1, 1] },
+  ],
+  warehouse: [
+    { itemId: 'a_kevlar_vest', category: 'armor', chance: 0.08, qty: [1, 1] },
+    { itemId: 'a_street_helmet', category: 'armor', chance: 0.05, qty: [1, 1] },
+  ],
+  truck_jack: [
+    { itemId: 'v_beaten_sedan', category: 'vehicle', chance: 0.07, qty: [1, 1] },
+    { itemId: 'w_street_revolver', category: 'weapon', chance: 0.05, qty: [1, 1] },
+  ],
+  dock_smuggle: [
+    { itemId: 'v_speedboat', category: 'vehicle', chance: 0.06, qty: [1, 1] },
+    { itemId: 'v_muscle_car', category: 'vehicle', chance: 0.04, qty: [1, 1] },
+  ],
+  counterfeit: [
+    { itemId: 'w_street_revolver', category: 'weapon', chance: 0.07, qty: [1, 1] },
+    { itemId: 'w_sawed_off_shotgun', category: 'weapon', chance: 0.04, qty: [1, 1] },
+  ],
+  nightclub: [
+    { itemId: 'energy_pack', category: 'consumable', chance: 0.1, qty: [1, 2] },
+    { itemId: 'v_muscle_car', category: 'vehicle', chance: 0.04, qty: [1, 1] },
+  ],
+  insider_trade: [
+    { itemId: 'w_compact_smg', category: 'weapon', chance: 0.06, qty: [1, 1] },
+    { itemId: 'a_tactical_vest', category: 'armor', chance: 0.05, qty: [1, 1] },
+  ],
+  casino_scam: [
+    { itemId: 'w_compact_smg', category: 'weapon', chance: 0.05, qty: [1, 1] },
+    { itemId: 'health_kit', category: 'consumable', chance: 0.06, qty: [1, 1] },
+  ],
+  art_heist: [
+    { itemId: 'a_tactical_vest', category: 'armor', chance: 0.05, qty: [1, 1] },
+    { itemId: 'w_tactical_rifle', category: 'weapon', chance: 0.04, qty: [1, 1] },
+  ],
+  penthouse: [
+    { itemId: 'v_armored_suv', category: 'vehicle', chance: 0.04, qty: [1, 1] },
+    { itemId: 'w_assault_rifle', category: 'weapon', chance: 0.03, qty: [1, 1] },
+  ],
+  bank_job: [
+    { itemId: 'w_compact_smg', category: 'weapon', chance: 0.05, qty: [1, 1] },
+    { itemId: 'a_ballistic_suit', category: 'armor', chance: 0.03, qty: [1, 1] },
+  ],
+  arms_deal: [
+    { itemId: 'w_tactical_rifle', category: 'weapon', chance: 0.04, qty: [1, 1] },
+    { itemId: 'w_assault_rifle', category: 'weapon', chance: 0.03, qty: [1, 1] },
+  ],
+  hostile_takeover: [
+    { itemId: 'a_tactical_vest', category: 'armor', chance: 0.04, qty: [1, 1] },
+    { itemId: 'a_elite_body_armor', category: 'armor', chance: 0.02, qty: [1, 1] },
+  ],
+  diamond_run: [
+    { itemId: 'v_executive_limo', category: 'vehicle', chance: 0.03, qty: [1, 1] },
+    { itemId: 'w_long_range_sniper', category: 'weapon', chance: 0.02, qty: [1, 1] },
+  ],
+  syndicate_hit: [
+    { itemId: 'w_assault_rifle', category: 'weapon', chance: 0.03, qty: [1, 1] },
+    { itemId: 'w_combat_shotgun', category: 'weapon', chance: 0.02, qty: [1, 1] },
+  ],
+  default: [{ itemId: 'health_kit', category: 'consumable', chance: 0.04, qty: [1, 1] }],
 };
 
-export const ASSET_VERSION = '2.6.9';
+/** Bonus chance to find random weapon/armor/vehicle unlocked at player level. */
+export const JOB_RANDOM_GEAR_CHANCE = 0.08;
+
+export function gearUnlockedAtLevel(playerLevel) {
+  const lvl = Math.max(1, Number(playerLevel) || 1);
+  return ALL_ITEMS.filter(
+    (i) => ['weapon', 'armor', 'vehicle'].includes(i.category) && (i.minLevel || 1) <= lvl,
+  );
+}
+
+export function pickRandomJobGearDrop(playerLevel, rng = Math.random) {
+  const pool = gearUnlockedAtLevel(playerLevel);
+  if (!pool.length) return null;
+  const item = pool[Math.floor(rng() * pool.length)];
+  return { itemId: item.id, category: item.category, qty: 1 };
+}
+
+export const ASSET_VERSION = '2.8.0';
 
 export function getMissionMasteryLevel(completions) {
   let level = 0;
@@ -535,7 +643,7 @@ export function hitlistKillerBonus(bounty, attackerLevel, targetLevel) {
   return Math.floor(bounty * HITLIST_BONUS_MULTIPLIER) + Math.floor((targetLevel + attackerLevel) * 2.5);
 }
 
-/** The Godfather specialty shop — spend Favor Points (stored in players.gold column) */
+/** The Godfather specialty shop — Favor Points (players.gold): refills + exclusive gear. */
 export const GODFATHER_STORE = [
   { id: 'energy_refill', name: 'Full Energy Refill', favorCost: 8, effect: 'energy', icon: '⚡' },
   { id: 'stamina_refill', name: 'Full Stamina Refill', favorCost: 6, effect: 'stamina', icon: '💪' },
@@ -545,6 +653,16 @@ export const GODFATHER_STORE = [
   { id: 'mob_squad', name: 'Mob Squad (+5 Mob)', favorCost: 30, effect: 'mob', amount: 5, icon: '👥' },
   { id: 'xp_boost', name: 'XP Boost (2hr)', favorCost: 12, effect: 'xp_boost', amount: 2, icon: '⭐' },
   { id: 'ice_pack', name: 'Ice Protection (4hr)', favorCost: 10, effect: 'ice', amount: 4, icon: '🧊' },
+  { id: 'gf_rusty_knife', name: 'Rusty Knife', favorCost: 5, effect: 'gear', itemId: 'w_rusty_knife', category: 'weapon', qty: 1, minLevel: 1, icon: '🔪' },
+  { id: 'gf_street_revolver', name: 'Street Revolver', favorCost: 14, effect: 'gear', itemId: 'w_street_revolver', category: 'weapon', qty: 1, minLevel: 17, icon: '🔫' },
+  { id: 'gf_kevlar', name: 'Kevlar Vest', favorCost: 12, effect: 'gear', itemId: 'a_kevlar_vest', category: 'armor', qty: 1, minLevel: 5, icon: '🛡' },
+  { id: 'gf_muscle_car', name: 'Muscle Car', favorCost: 22, effect: 'gear', itemId: 'v_muscle_car', category: 'vehicle', qty: 1, minLevel: 5, icon: '🚗' },
+  { id: 'gf_compact_smg', name: 'Compact SMG', favorCost: 28, effect: 'gear', itemId: 'w_compact_smg', category: 'weapon', qty: 1, minLevel: 25, icon: '🔫' },
+  { id: 'gf_tactical_vest', name: 'Tactical Vest', favorCost: 32, effect: 'gear', itemId: 'a_tactical_vest', category: 'armor', qty: 1, minLevel: 13, icon: '🛡' },
+  { id: 'gf_armored_suv', name: 'Armored SUV', favorCost: 45, effect: 'gear', itemId: 'v_armored_suv', category: 'vehicle', qty: 1, minLevel: 9, icon: '🚙' },
+  { id: 'gf_assault_rifle', name: 'Assault Rifle', favorCost: 55, effect: 'gear', itemId: 'w_assault_rifle', category: 'weapon', qty: 1, minLevel: 33, icon: '🔫' },
+  { id: 'gf_energy_pack', name: 'Energy Pack ×3', favorCost: 10, effect: 'gear', itemId: 'energy_pack', category: 'consumable', qty: 3, minLevel: 1, icon: '⚡' },
+  { id: 'gf_mob_contract', name: 'Mob Contract (+5)', favorCost: 35, effect: 'gear', itemId: 'mob_contract', category: 'consumable', qty: 1, minLevel: 10, icon: '👥' },
 ];
 
 /** @deprecated use GODFATHER_STORE */

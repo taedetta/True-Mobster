@@ -3,15 +3,18 @@ import { useGame } from '../context/GameContext';
 import { formatMoney } from '../api';
 import ItemImage from '../components/ItemImage';
 
+function findCatalogItem(catalog, itemId, category) {
+  const key = category === 'weapon' ? 'weapons' : category === 'armor' ? 'armor' : category === 'vehicle' ? 'vehicles' : 'consumables';
+  return catalog?.[key]?.find((i) => i.id === itemId);
+}
+
 function jobReady(job, state, catalog) {
   if (state.energy < job.energy) return { ok: false, reason: 'Need energy' };
   if ((state.effective_mob_size || state.mob_size) < (job.minMob || 1)) return { ok: false, reason: `Need mob ${job.minMob}` };
   for (const req of job.requiredItems || []) {
     const owned = (state.inventory || []).find((i) => i.item_id === req.itemId && i.category === req.category);
     if ((owned?.quantity || 0) < (req.qty || 1)) {
-      const item = catalog?.weapons?.find((w) => w.id === req.itemId)
-        || catalog?.armor?.find((a) => a.id === req.itemId)
-        || catalog?.vehicles?.find((v) => v.id === req.itemId);
+      const item = findCatalogItem(catalog, req.itemId, req.category);
       return { ok: false, reason: `Need ${req.qty}x ${item?.name || req.itemId}` };
     }
   }
@@ -69,7 +72,7 @@ export default function JobsPage() {
       </div>
 
       <h2 className="font-display text-lg text-mob-gold">{loc?.name} Missions</h2>
-      <p className="text-[10px] text-gray-500">Mastery Lv.1–4 at 10/25/50/100 completions. Some jobs require gear & mob size.</p>
+      <p className="text-[10px] text-gray-500">Mastery Lv.1–4 at 10/25/50/100 completions. Jobs need gear (owned, not consumed) & mob — random equipment drops at your level.</p>
 
       {lastLoot?.length > 0 && (
         <div className="card border-green-700/40 bg-green-900/10">
@@ -101,8 +104,14 @@ export default function JobsPage() {
                 {(job.minMob > 1 || job.requiredItems?.length > 0) && (
                   <p className="text-[10px] text-amber-400/80 mt-0.5">
                     Requires: Mob {job.minMob}
-                    {job.requiredItems?.map((r) => ` · ${r.qty}x item`).join('')}
+                    {job.requiredItems?.map((r) => {
+                      const item = findCatalogItem(catalog, r.itemId, r.category);
+                      return ` · ${r.qty}x ${item?.name || r.itemId}`;
+                    }).join('')}
                   </p>
+                )}
+                {job.lootChance > 0 && (
+                  <p className="text-[10px] text-green-500/70">Loot chance ~{Math.round(job.lootChance * 100)}%</p>
                 )}
                 {!ready.ok && <p className="text-[10px] text-red-400">{ready.reason}</p>}
                 <p className="text-xs text-red-400/70">{Math.round(job.failRate * 100)}% fail → jail</p>

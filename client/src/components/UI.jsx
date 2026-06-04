@@ -186,7 +186,10 @@ export function ShopItemCard({ item, ownedQty = 0, playerLevel, playerMoney, onB
   const maxQty = showSell ? ownedQty : maxBuy;
   const canBuy = playerLevel >= item.minLevel && maxBuy >= 1;
   const canSell = ownedQty > 0 && onSell;
-  const statLabel = item.attack ? `+${item.attack} ATK` : item.defense ? `+${item.defense} DEF` : item.income ? `$${item.income}/hr` : '';
+  const statParts = [];
+  if (item.attack > 0) statParts.push(`+${item.attack} ATK`);
+  if (item.defense > 0) statParts.push(`+${item.defense} DEF`);
+  const statLabel = statParts.length ? statParts.join(' · ') : item.income ? `$${item.income}/hr` : '';
   const upkeepLabel = item.upkeep > 0 ? `$${item.upkeep}/hr upkeep` : '';
 
   const setMax = () => setQty(Math.max(1, maxQty || 1));
