@@ -110,6 +110,7 @@ export default function FightResultModal({
                   <Link to={`/player/${defId}`} className="text-yellow-400 underline">{defName}</Link>
                 ) : defName}.
                 {money > 0 ? <> You took {formatMoney(money)}.</> : null}
+                {report.respectGained > 0 ? <> +{report.respectGained} respect.</> : null}
                 {' '}You gained {xp} experience points.
               </>
             ) : (

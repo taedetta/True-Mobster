@@ -7,7 +7,7 @@ export const REGEN = { energySeconds: 165, staminaSeconds: 165, healthSeconds: 1
 export const LEVEL_XP = (level) => Math.floor(100 * Math.pow(level, 1.85));
 export const BASE_STATS = { maxEnergy: 10, maxStamina: 5, maxHealth: 100, attack: 1, defense: 1 };
 export const STAT_GROWTH_PER_LEVEL = { maxEnergy: 2, maxStamina: 1, maxHealth: 10 };
-export const SKILL_POINTS_PER_LEVEL = 3;
+export const SKILL_POINTS_PER_LEVEL = 6;
 
 export const HOSPITAL_COST_PER_HP = 10;
 export const HOSPITAL_HEAL_THRESHOLD = 0.6;
@@ -50,11 +50,12 @@ export const DEFAULT_FIGHT_TYPE = 'attack';
 export const FIGHT_TYPES = {
   attack: {
     stamina: 1,
-    xpWin: [5, 35],
-    xpLose: [2, 12],
-    money: [50, 500],
-    respect: [1, 5],
-    damage: [10, 30],
+    /** Base templates — actual rewards scale with level via rollFightXp / rollFightDamage */
+    xpWinBase: [5, 35],
+    xpLoseBase: [2, 14],
+    moneyBase: [50, 500],
+    respectBase: [1, 6],
+    damageBase: [8, 24],
     label: 'Attack',
   },
 };
@@ -320,7 +321,7 @@ export const JOB_LOOT = {
   default: [{ itemId: 'consumable_health_kit', category: 'consumable', chance: 0.03, qty: [1, 1] }],
 };
 
-export const ASSET_VERSION = '2.6.8';
+export const ASSET_VERSION = '2.6.9';
 
 export function getMissionMasteryLevel(completions) {
   let level = 0;
@@ -433,6 +434,100 @@ export function calcFightWinChance(attackPower, defensePower) {
   if (ratio >= 0.85) return 0.35 + (ratio - 0.85) * 1.33;
   if (ratio >= 0.67) return 0.12 + (ratio - 0.67) * 1.35;
   return Math.max(0.02, ratio * 0.15);
+}
+
+/** Level-scaled min/max — rewards and damage ranges grow as you level (iMobsters-style). */
+export function levelScaleRange(level, baseMin, baseMax, perLevelGrowth = 0.1) {
+  const lvl = Math.max(1, Number(level) || 1);
+  const mult = 1 + (lvl - 1) * perLevelGrowth;
+  const min = Math.max(1, Math.floor(baseMin * mult));
+  const max = Math.max(min, Math.floor(baseMax * mult));
+  return [min, max];
+}
+
+function rollInRange(min, max, rng = Math.random) {
+  return Math.floor(rng() * (max - min + 1)) + min;
+}
+
+export function rollScaledByLevel(level, baseMin, baseMax, perLevelGrowth = 0.1, rng = Math.random) {
+  const [min, max] = levelScaleRange(level, baseMin, baseMax, perLevelGrowth);
+  return rollInRange(min, max, rng);
+}
+
+export function resolveFightRoll(attackPower, defensePower, rng = Math.random) {
+  const baseChance = calcFightWinChance(attackPower, defensePower);
+  const jitter = (rng() - 0.5) * 0.06;
+  const rollChance = Math.min(0.98, Math.max(0.02, baseChance + jitter));
+  return { attackerWon: rng() < rollChance, winChance: Math.round(baseChance * 100) };
+}
+
+export function rollFightXp(attackerLevel, won, rng = Math.random) {
+  if (won) return rollScaledByLevel(attackerLevel, 5, 35, 0.12, rng);
+  return rollScaledByLevel(attackerLevel, 2, 14, 0.08, rng);
+}
+
+export function rollFightRespect(attackerLevel, defenderLevel, rng = Math.random) {
+  const avg = Math.floor((attackerLevel + defenderLevel) / 2);
+  return rollScaledByLevel(avg, 1, 6, 0.05, rng);
+}
+
+export function rollFightMoneySteal(defenderMoney, attackerLevel, defenderLevel, rng = Math.random) {
+  const avg = Math.floor((attackerLevel + defenderLevel) / 2);
+  const pct = FIGHT_MONEY_STEAL_MIN + rng() * (FIGHT_MONEY_STEAL_MAX - FIGHT_MONEY_STEAL_MIN);
+  const fromPct = Math.floor(defenderMoney * pct);
+  const [flatMin, flatMax] = levelScaleRange(avg, 50, 500, 0.08);
+  const fromFlat = rollInRange(flatMin, flatMax, rng);
+  return Math.min(defenderMoney, Math.max(fromPct, fromFlat));
+}
+
+export function rollFightMoneyLost(attackerMoney, attackerLevel, defenderLevel, rng = Math.random) {
+  const avg = Math.floor((attackerLevel + defenderLevel) / 2);
+  const pct = FIGHT_MONEY_LOST_MIN + rng() * (FIGHT_MONEY_LOST_MAX - FIGHT_MONEY_LOST_MIN);
+  let lost = Math.floor(attackerMoney * pct);
+  const [flatMin, flatMax] = levelScaleRange(avg, 10, 80, 0.06);
+  if (lost < flatMin && attackerMoney > 0) {
+    lost = Math.min(attackerMoney, rollInRange(flatMin, Math.max(flatMin, flatMax), rng));
+  }
+  return Math.min(Math.max(0, lost), attackerMoney);
+}
+
+/** Damage scales with average level + winner's combat power (iMobsters: stronger side hits harder). */
+export function rollFightDamage({
+  attackerWon, attackerLevel, defenderLevel, attackerPower, defenderPower, rng = Math.random,
+}) {
+  const avgLevel = Math.max(1, Math.floor((attackerLevel + defenderLevel) / 2));
+  const winnerPower = attackerWon ? attackerPower : defenderPower;
+  const loserPower = attackerWon ? defenderPower : attackerPower;
+  const ratio = winnerPower / Math.max(1, loserPower);
+  const [baseMin, baseMax] = levelScaleRange(avgLevel, 8, 24, 0.09);
+  const powerBoost = Math.floor(winnerPower * 0.05 * Math.min(2.5, ratio));
+  const loserMin = baseMin + powerBoost;
+  const loserMax = baseMax + powerBoost + Math.floor(avgLevel * 0.4);
+  const loserDamage = rollInRange(loserMin, Math.max(loserMin, loserMax), rng);
+  const winnerRatio = attackerWon ? 0.08 + rng() * 0.17 : 0.14 + rng() * 0.22;
+  const winnerDamage = Math.max(1, Math.floor(loserDamage * winnerRatio));
+  if (attackerWon) {
+    return { attackerDamageTaken: winnerDamage, defenderDamageTaken: loserDamage };
+  }
+  return { attackerDamageTaken: loserDamage, defenderDamageTaken: winnerDamage };
+}
+
+export function rollMissionXp(playerLevel, jobBaseXp, masteryMult = 1, rng = Math.random) {
+  const [min, max] = levelScaleRange(playerLevel, Math.floor(jobBaseXp * 0.7), Math.floor(jobBaseXp * 1.4), 0.05);
+  return Math.floor(rollInRange(min, max, rng) * masteryMult);
+}
+
+export function rollMissionMoney(playerLevel, moneyRange, masteryMult = 1, rng = Math.random) {
+  const [min, max] = levelScaleRange(playerLevel, moneyRange[0], moneyRange[1], 0.04);
+  return Math.floor(rollInRange(min, max, rng) * masteryMult);
+}
+
+export function hitlistMinBounty(targetLevel) {
+  return Math.max(HITLIST_MIN_BOUNTY, Math.floor(HITLIST_MIN_BOUNTY * (1 + (Math.max(1, targetLevel) - 1) * 0.08)));
+}
+
+export function hitlistKillerBonus(bounty, attackerLevel, targetLevel) {
+  return Math.floor(bounty * HITLIST_BONUS_MULTIPLIER) + Math.floor((targetLevel + attackerLevel) * 2.5);
 }
 
 /** The Godfather specialty shop — spend Favor Points (stored in players.gold column) */

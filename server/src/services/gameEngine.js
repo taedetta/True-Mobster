@@ -10,8 +10,9 @@ import {
   generateReferralCode, GOLD_JOB_CHANCE, PROPERTY_MAX_STACK, DEFAULT_AVATARS, avatarUrl,
   MOB_USABLE_PER_LEVEL, getMobBracket, GODFATHER_STORE, GOLD_STORE, ECONOMY_TICK_MS, getItemById,
   ITEM_MAX_STACK, FIGHT_GEAR_LOSS_RATE, itemThumbnailPath, JOB_LOOT,
-  calcFightAttackPower, calcFightDefensePower, calcFightWinChance,
-  FIGHT_MONEY_STEAL_MIN, FIGHT_MONEY_STEAL_MAX, FIGHT_MONEY_LOST_MIN, FIGHT_MONEY_LOST_MAX,
+  calcFightAttackPower, calcFightDefensePower,
+  resolveFightRoll, rollFightXp, rollFightRespect, rollFightMoneySteal, rollFightMoneyLost, rollFightDamage,
+  rollMissionXp, rollMissionMoney, hitlistMinBounty, hitlistKillerBonus,
   getMissionMasteryLevel, getMissionMasteryBonus, MISSION_MASTERY_THRESHOLDS,
   BOSS_FIGHT_HOURS, BOSS_MASTERY_KILLS,
   SKILL_POINTS_PER_LEVEL, STAMINA_SKILL_COST, CREW_SPEND_OPTIONS, HOSPITAL_HEAL_THRESHOLD,
@@ -25,10 +26,6 @@ function nowISO() { return new Date().toISOString(); }
 function parseTime(iso) { return new Date(iso || nowISO()).getTime(); }
 function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
-function rollFightRange(value) {
-  if (Array.isArray(value)) return randomInt(value[0], value[1]);
-  return Number(value) || 0;
-}
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 function dateStr(val) {
   if (!val) return null;
@@ -485,8 +482,8 @@ export async function doJob(userId, jobId) {
   const loot = [];
   let masteryResult = null;
   if (!failed) {
-    money = Math.floor(randomInt(job.money[0], job.money[1]) * masteryBonus.moneyMult);
-    xp = Math.floor(job.xp * masteryBonus.xpMult);
+    money = rollMissionMoney(player.level, job.money, masteryBonus.moneyMult);
+    xp = rollMissionXp(player.level, job.xp, masteryBonus.xpMult);
     if (Math.random() < GOLD_JOB_CHANCE) goldEarned = randomInt(1, 3) + masteryBonus.favorBonus;
     for (const drop of rollJobLoot(job)) {
       const granted = await grantInventoryItem(userId, drop.itemId, drop.category, drop.qty);
@@ -545,8 +542,7 @@ export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_F
 
   const attackerPower = atkReport.fightAttack;
   const defenderPower = defReport.fightDefense;
-  const winChance = calcFightWinChance(attackerPower, defenderPower);
-  const attackerWon = Math.random() < winChance;
+  const { attackerWon, winChance } = resolveFightRoll(attackerPower, defenderPower);
 
   let moneyStolen = 0;
   let moneyLost = 0;
@@ -560,21 +556,18 @@ export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_F
 
   if (attackerWon) {
     defenderItemsLost = await applyFightGearLoss(defenderId, defReport);
-    const pctSteal = randomInt(Math.floor(FIGHT_MONEY_STEAL_MIN * 100), Math.floor(FIGHT_MONEY_STEAL_MAX * 100)) / 100;
-    moneyStolen = Math.max(ft.money[0], Math.floor(defender.money * pctSteal));
-    moneyStolen = Math.min(moneyStolen, defender.money);
-    if (moneyStolen < ft.money[0] && defender.money >= ft.money[0]) {
-      moneyStolen = Math.min(defender.money, randomInt(ft.money[0], ft.money[1]));
-    }
-    respectGained = rollFightRange(ft.respect);
+    moneyStolen = rollFightMoneySteal(defender.money, attacker.level, defender.level);
+    respectGained = rollFightRespect(attacker.level, defender.level);
     if (hitlistEntry) {
-      bountyClaimed = Math.floor(hitlistEntry.bounty * HITLIST_BONUS_MULTIPLIER);
+      bountyClaimed = hitlistKillerBonus(hitlistEntry.bounty, attacker.level, defender.level);
       moneyStolen += bountyClaimed;
       await db.run('UPDATE hitlist SET claimed=1 WHERE id=?', [hitlistEntry.id]);
       await db.run('UPDATE players SET bounties_claimed=bounties_claimed+1 WHERE user_id=?', [attackerId]);
     }
-    defenderDamageTaken = randomInt(ft.damage[0], ft.damage[1]);
-    attackerDamageTaken = randomInt(1, Math.max(1, Math.floor(defenderDamageTaken / 4)));
+    ({ attackerDamageTaken, defenderDamageTaken } = rollFightDamage({
+      attackerWon: true, attackerLevel: attacker.level, defenderLevel: defender.level,
+      attackerPower, defenderPower,
+    }));
     const defHealth = Math.max(0, defender.health - defenderDamageTaken);
     await db.run('UPDATE players SET stamina=stamina-?, health=CASE WHEN health-? < 0 THEN 0 ELSE health-? END, money=money+?, respect=respect+?, wins=wins+1 WHERE user_id=?',
       [ft.stamina, attackerDamageTaken, attackerDamageTaken, moneyStolen, respectGained, attackerId]);
@@ -583,19 +576,18 @@ export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_F
     if (defender.is_bot) await scheduleBotRetaliation(defenderId, attackerId);
   } else {
     attackerItemsLost = await applyFightGearLoss(attackerId, atkReport);
-    const pctLost = randomInt(Math.floor(FIGHT_MONEY_LOST_MIN * 100), Math.floor(FIGHT_MONEY_LOST_MAX * 100)) / 100;
-    moneyLost = Math.max(0, Math.floor(attacker.money * pctLost));
-    moneyLost = Math.min(moneyLost, attacker.money);
-    if (moneyLost < 1 && attacker.money > 0) moneyLost = Math.min(attacker.money, randomInt(1, Math.max(1, ft.money[0])));
-    attackerDamageTaken = randomInt(ft.damage[0] + 5, ft.damage[1] + 10);
-    defenderDamageTaken = randomInt(1, Math.max(1, Math.floor(attackerDamageTaken / 5)));
+    moneyLost = rollFightMoneyLost(attacker.money, attacker.level, defender.level);
+    ({ attackerDamageTaken, defenderDamageTaken } = rollFightDamage({
+      attackerWon: false, attackerLevel: attacker.level, defenderLevel: defender.level,
+      attackerPower, defenderPower,
+    }));
     await db.run('UPDATE players SET stamina=stamina-?, health=CASE WHEN health-? < 0 THEN 0 ELSE health-? END, money=CASE WHEN money-? < 0 THEN 0 ELSE money-? END, losses=losses+1 WHERE user_id=?',
       [ft.stamina, attackerDamageTaken, attackerDamageTaken, moneyLost, moneyLost, attackerId]);
     await db.run('UPDATE players SET money=money+?, health=CASE WHEN health-? < 0 THEN 0 ELSE health-? END WHERE user_id=?',
       [moneyLost, defenderDamageTaken, defenderDamageTaken, defenderId]);
   }
 
-  const xpGained = attackerWon ? rollFightRange(ft.xpWin) : rollFightRange(ft.xpLose);
+  const xpGained = rollFightXp(attacker.level, attackerWon);
 
   const fightReport = {
     fightType: DEFAULT_FIGHT_TYPE,
@@ -605,7 +597,7 @@ export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_F
     respectGained,
     bountyClaimed,
     killed: false,
-    winChance: Math.round(winChance * 100),
+    winChance,
     attackerPower,
     defenderPower,
     attackerDamageTaken,
@@ -659,7 +651,7 @@ export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_F
   return {
     attackerWon, moneyStolen, moneyLost, respectGained, bountyClaimed, killed: 0,
     hitlistBonus: bountyClaimed > 0, atkStats, defStats,
-    winChance: Math.round(winChance * 100), fightType: DEFAULT_FIGHT_TYPE, fightReport,
+    winChance, fightType: DEFAULT_FIGHT_TYPE, fightReport,
     combatLogId: fightReport.combatLogId,
   };
 }
@@ -840,6 +832,10 @@ export async function addToHitlist(userId, targetId, bounty) {
   if (!Number.isInteger(bounty) || bounty < HITLIST_MIN_BOUNTY) throw new Error(`Minimum bounty is $${HITLIST_MIN_BOUNTY}`);
   if (userId === targetId) throw new Error('Cannot hitlist yourself');
   const player = await getPlayerRow(userId);
+  const target = await getPlayerRow(targetId);
+  if (!target) throw new Error('Target not found');
+  const minForTarget = hitlistMinBounty(target.level);
+  if (bounty < minForTarget) throw new Error(`Minimum bounty for level ${target.level} target is $${minForTarget.toLocaleString()}`);
   const fee = Math.floor(bounty * HITLIST_FEE_PERCENT);
   const total = bounty + fee;
   if (player.money < total) throw new Error('Not enough money');
