@@ -24,6 +24,11 @@ const nowFn = () => (isPostgres ? 'NOW()' : "datetime('now')");
 function nowISO() { return new Date().toISOString(); }
 function parseTime(iso) { return new Date(iso || nowISO()).getTime(); }
 function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function rollFightRange(value) {
+  if (Array.isArray(value)) return randomInt(value[0], value[1]);
+  return Number(value) || 0;
+}
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 function dateStr(val) {
   if (!val) return null;
@@ -561,7 +566,7 @@ export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_F
     if (moneyStolen < ft.money[0] && defender.money >= ft.money[0]) {
       moneyStolen = Math.min(defender.money, randomInt(ft.money[0], ft.money[1]));
     }
-    respectGained = ft.respect;
+    respectGained = rollFightRange(ft.respect);
     if (hitlistEntry) {
       bountyClaimed = Math.floor(hitlistEntry.bounty * HITLIST_BONUS_MULTIPLIER);
       moneyStolen += bountyClaimed;
@@ -590,7 +595,7 @@ export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_F
       [moneyLost, defenderDamageTaken, defenderDamageTaken, defenderId]);
   }
 
-  const xpGained = attackerWon ? ft.xpWin : ft.xpLose;
+  const xpGained = attackerWon ? rollFightRange(ft.xpWin) : rollFightRange(ft.xpLose);
 
   const fightReport = {
     fightType: DEFAULT_FIGHT_TYPE,

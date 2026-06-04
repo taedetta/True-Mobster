@@ -50,10 +50,10 @@ export const DEFAULT_FIGHT_TYPE = 'attack';
 export const FIGHT_TYPES = {
   attack: {
     stamina: 1,
-    xpWin: 15,
-    xpLose: 5,
+    xpWin: [5, 35],
+    xpLose: [2, 12],
     money: [50, 500],
-    respect: 2,
+    respect: [1, 5],
     damage: [10, 30],
     label: 'Attack',
   },
@@ -320,7 +320,7 @@ export const JOB_LOOT = {
   default: [{ itemId: 'consumable_health_kit', category: 'consumable', chance: 0.03, qty: [1, 1] }],
 };
 
-export const ASSET_VERSION = '2.6.7';
+export const ASSET_VERSION = '2.6.8';
 
 export function getMissionMasteryLevel(completions) {
   let level = 0;
