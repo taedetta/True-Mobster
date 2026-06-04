@@ -12,7 +12,7 @@ export default function LeaderboardPage() {
   return (
     <div className="space-y-4">
       <h2 className="font-display text-lg text-mob-gold">Leaderboard</h2>
-      <p className="text-xs text-gray-400">Top mobsters by respect — iMobsters style rankings.</p>
+      <p className="text-xs text-gray-400">Top players by respect</p>
       <div className="space-y-2">
         {rows.map((p, i) => (
           <Link key={p.user_id} to={`/player/${p.user_id}`} className="card flex items-center gap-3 hover:border-mob-gold/30">

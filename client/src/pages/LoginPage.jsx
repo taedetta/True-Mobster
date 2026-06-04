@@ -25,15 +25,15 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
       <div className="text-center mb-8">
         <div className="text-6xl mb-4 drop-shadow-glow">🎩</div>
-        <h1 className="font-display text-4xl text-mob-gold tracking-wide">iMobsters</h1>
-        <p className="text-red-900 mt-2 text-sm uppercase tracking-widest">Storm8 · True Mobsters</p>
+        <h1 className="font-display text-4xl text-mob-gold tracking-wide">True Mobsters</h1>
+        <p className="text-yellow-800 mt-2 text-sm uppercase tracking-widest">VisionIt Studio</p>
         <p className="text-gray-600 text-sm mt-1 max-w-xs">Build your criminal empire. Fight rivals. Rule the streets.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="card w-full max-w-sm space-y-4">
         <div className="flex gap-2 mb-2">
-          <button type="button" className={`flex-1 py-2 rounded-lg text-sm font-semibold ${mode === 'login' ? 'bg-red-700 text-white' : 'bg-black border border-red-950 text-gray-400'}`} onClick={() => setMode('login')}>Login</button>
-          <button type="button" className={`flex-1 py-2 rounded-lg text-sm font-semibold ${mode === 'register' ? 'bg-red-700 text-white' : 'bg-black border border-red-950 text-gray-400'}`} onClick={() => setMode('register')}>Register</button>
+          <button type="button" className={`flex-1 py-2 rounded-lg text-sm font-semibold ${mode === 'login' ? 'bg-yellow-700 text-black' : 'bg-black border border-yellow-950 text-gray-400'}`} onClick={() => setMode('login')}>Login</button>
+          <button type="button" className={`flex-1 py-2 rounded-lg text-sm font-semibold ${mode === 'register' ? 'bg-yellow-700 text-black' : 'bg-black border border-yellow-950 text-gray-400'}`} onClick={() => setMode('register')}>Register</button>
         </div>
 
         <input className="w-full px-4 py-3 rounded-lg bg-mob-bg border border-mob-border focus:border-mob-gold outline-none" placeholder="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />

@@ -25,7 +25,7 @@ export default function EstatePage() {
     <div className="space-y-4">
       <div>
         <h2 className="font-display text-lg text-mob-gold">Real Estate</h2>
-        <p className="text-[10px] text-gray-500">Income auto-deposits every hour — no collect button (iMobsters)</p>
+        <p className="text-[10px] text-gray-500">Income auto-deposits every hour — no collect button</p>
       </div>
 
       <div className="card border-red-900/40">

@@ -34,8 +34,8 @@ export default function GameLayout() {
       <ImobstersHud state={state} />
 
       {!isHome && (
-        <div className="px-3 py-2 flex items-center justify-between border-b border-red-950/60 bg-black/90">
-          <Link to="/" className="text-xs text-red-400 font-semibold hover:text-red-300">← Home</Link>
+        <div className="px-3 py-2 flex items-center justify-between border-b border-yellow-950/60 bg-black/90">
+          <Link to="/" className="text-xs text-yellow-400 font-semibold hover:text-yellow-300">← Home</Link>
           {pageTitle && <span className="text-xs text-gray-400 uppercase tracking-wider">{pageTitle}</span>}
           <span className="w-10" />
         </div>

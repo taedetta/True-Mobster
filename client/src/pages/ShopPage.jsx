@@ -65,7 +65,7 @@ export default function ShopPage() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="font-display text-lg text-mob-gold">Equipment</h2>
-          <p className="text-[10px] text-gray-500">iMobsters-style — buy any quantity while you have cash</p>
+          <p className="text-[10px] text-gray-500">Buy any quantity while you have cash</p>
         </div>
         <span className="text-xs text-green-400 font-bold">{formatMoney(state.money)}</span>
       </div>

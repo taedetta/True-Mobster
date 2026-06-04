@@ -9,7 +9,7 @@ export default function CollectionsPage() {
   return (
     <div className="space-y-4">
       <h2 className="font-display text-lg text-mob-gold">Equipment Collections</h2>
-      <p className="text-xs text-gray-400">Own full sets for permanent combat bonuses — just like iMobsters loot sets.</p>
+      <p className="text-xs text-gray-400">Own full sets for permanent combat bonuses.</p>
 
       {collections.map((col) => (
         <div key={col.id} className={`card ${col.complete ? 'border-green-700/40 bg-green-900/10' : ''}`}>

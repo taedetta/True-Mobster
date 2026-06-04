@@ -305,7 +305,7 @@ export const JOB_LOOT = {
   default: [{ itemId: 'consumable_health_kit', category: 'consumable', chance: 0.03, qty: [1, 1] }],
 };
 
-export const ASSET_VERSION = '2.6.3';
+export const ASSET_VERSION = '2.6.4';
 
 export function getMissionMasteryLevel(completions) {
   let level = 0;

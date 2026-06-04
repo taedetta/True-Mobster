@@ -101,7 +101,7 @@ export default function ProfilePage() {
 
       <div className="card" id="bank">
         <h3 className="font-semibold mb-3">🏦 Bank</h3>        <p className="text-sm text-gray-400 mb-2">Cash: {formatMoney(state.money)} · Bank: {formatMoney(state.bank_balance)}</p>
-        <p className="text-[10px] text-amber-400/80 mb-2">10% deposit fee (iMobsters-style) — protects cash from thieves</p>
+        <p className="text-[10px] text-amber-400/80 mb-2">10% deposit fee — protects cash from thieves</p>
         <input type="number" className="w-full px-3 py-2 rounded-lg bg-mob-bg border border-mob-border mb-2 text-sm" placeholder="Amount" value={bankAmount} onChange={(e) => setBankAmount(e.target.value)} />
         <div className="grid grid-cols-2 gap-2">
           <button type="button" className="btn-primary text-xs" onClick={() => action('/bank/deposit', { amount: Number(bankAmount) }, 'Deposited!')}>Deposit</button>

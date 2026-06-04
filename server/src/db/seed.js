@@ -15,7 +15,12 @@ function xpForLevel(lvl) {
 
 async function createBot(name, level, stats) {
   const existing = await db.get('SELECT id FROM users WHERE username = ?', [name]);
-  if (existing) return existing.id;
+  if (existing) {
+    if (level <= 12) {
+      await db.run('UPDATE players SET mob_size=? WHERE user_id=?', [stats.mobSize, existing.id]);
+    }
+    return existing.id;
+  }
 
   const id = uuidv4();
   await db.run('INSERT INTO users (id, username, email, password_hash, is_bot) VALUES (?, ?, ?, ?, 1)',
@@ -61,11 +66,14 @@ export async function seedBots() {
   const levels = [5, 8, 12, 15, 20, 25, 30, 35, 40, 45, 10, 18, 22, 28, 32, 38, 42, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 48, 62];
   for (let i = 0; i < BOT_NAMES.length; i++) {
     const level = levels[i] || 10 + i;
+    const mobSize = level <= 12
+      ? Math.max(1, 1 + (i % 4))
+      : Math.min(500, 5 + level * 2);
     await createBot(BOT_NAMES[i], level, {
       respect: level * 15 + Math.floor(Math.random() * 200),
       money: level * 8000 + Math.floor(Math.random() * 20000),
       gold: Math.floor(level / 5),
-      mobSize: Math.min(500, 5 + level * 2),
+      mobSize,
       attack: Math.max(1, Math.floor(level * 0.8)),
       defense: Math.max(1, Math.floor(level * 0.7)),
       energySkill: Math.floor(level / 5),

@@ -68,6 +68,7 @@ router.post('/job', wrap(async (req) => {
 }));
 
 router.post('/fight', wrap(async (req) => {
+  if (!req.body.targetId) throw new Error('Select a target to attack');
   const result = await resolveFight(req.userId, req.body.targetId);
   return { ...result, state: await buildPlayerState(req.userId) };
 }));

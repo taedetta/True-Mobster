@@ -40,7 +40,7 @@ export default function BossPage() {
   return (
     <div className="space-y-4">
       <h2 className="font-display text-lg text-mob-gold">Boss Fights</h2>
-      <p className="text-xs text-gray-400">Attack bosses with stamina until their HP hits zero. Timed fight window like iMobsters.</p>
+      <p className="text-xs text-gray-400">Attack bosses with stamina until their HP hits zero.</p>
 
       <div className="space-y-3">
         {bosses.map((b) => {

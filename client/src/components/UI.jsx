@@ -88,7 +88,7 @@ export function ImobstersHud({ state }) {
   };
 
   const cashflowSign = net >= 0 ? '+' : '';
-  const cashflowColor = net >= 0 ? 'text-green-400' : 'text-red-400';
+  const cashflowColor = net >= 0 ? 'text-green-400' : 'text-amber-400';
 
   return (
     <div className="imob-hud">
@@ -280,8 +280,7 @@ export function LoadingScreen() {
 
       <div className="text-6xl animate-pulse drop-shadow-lg">🎩</div>
 
-      <h2 className="font-display text-3xl text-mob-gold tracking-wider">iMobsters</h2>
-
+      <h2 className="font-display text-3xl text-mob-gold tracking-wider">True Mobsters</h2>
       <p className="text-gray-500 text-sm font-medium">VisionIt Studio</p>
 
       <div className="w-10 h-10 border-2 border-mob-gold border-t-transparent rounded-full animate-spin" />

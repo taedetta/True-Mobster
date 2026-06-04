@@ -31,7 +31,7 @@ export default function GodfatherPage() {
           <p className="text-[10px] uppercase tracking-[0.2em] text-mob-gold/80">Specialty Shop</p>
           <h2 className="font-display text-xl text-mob-gold">The Godfather</h2>
           <p className="text-xs text-gray-400 mt-1">
-            Trade Favor Points for refills, hired guns, cash, and elite bonuses — just like iMobsters.
+            Trade Favor Points for refills, hired guns, cash, and elite bonuses.
           </p>
           <p className="text-lg font-bold text-red-300 mt-2">{favor} Favor Points</p>
           <p className="text-[10px] text-gray-500">Earn favor from jobs, daily login & achievements</p>

@@ -54,7 +54,7 @@ export default function MailPage() {
         )}
       </div>
 
-      <p className="text-[10px] text-gray-500">Offline attacks appear here with full mob & gear reports — just like iMobsters.</p>
+      <p className="text-[10px] text-gray-500">Offline attacks appear here with full mob and gear reports.</p>
 
       {selected ? (
         <div className="card">

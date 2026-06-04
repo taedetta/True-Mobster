@@ -73,7 +73,7 @@ export default function FightPage() {
 
     return (
       <div key={t.user_id} className="card flex items-center gap-3">
-        <Link to={`/player/${t.user_id}`} className="w-10 h-10 rounded-full bg-gradient-to-br from-red-900 to-black flex items-center justify-center overflow-hidden flex-shrink-0">
+        <Link to={`/player/${t.user_id}`} className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-900 to-black flex items-center justify-center overflow-hidden flex-shrink-0">
           <span className="text-lg">{t.is_bot ? '🤖' : '👤'}</span>
         </Link>
         <div className="flex-1 min-w-0">
@@ -144,7 +144,11 @@ export default function FightPage() {
 
       {tab === 'rivals' && (
         <div className="space-y-2">
-          {targets.length === 0 && <p className="text-gray-500 text-sm text-center">No rivals in your bracket</p>}
+          {targets.length === 0 && (
+            <p className="text-gray-500 text-sm text-center">
+              No rivals in your bracket right now — check back soon or grow your mob for more matchups.
+            </p>
+          )}
           {targets.map((t) => renderTarget(t))}
         </div>
       )}

@@ -12,58 +12,58 @@
   body {
     @apply min-h-screen bg-mob-bg text-gray-100 font-sans;
     background-image:
-      radial-gradient(ellipse 100% 60% at 50% 0%, rgba(127, 0, 0, 0.22) 0%, transparent 55%),
-      radial-gradient(ellipse 80% 50% at 100% 100%, rgba(80, 0, 0, 0.15) 0%, transparent 50%),
-      linear-gradient(180deg, #0a0a0a 0%, #100000 50%, #0a0a0a 100%);
+      radial-gradient(ellipse 100% 60% at 50% 0%, rgba(212, 175, 55, 0.12) 0%, transparent 55%),
+      radial-gradient(ellipse 80% 50% at 100% 100%, rgba(120, 90, 0, 0.1) 0%, transparent 50%),
+      linear-gradient(180deg, #0a0a0a 0%, #0f0d00 50%, #0a0a0a 100%);
     background-attachment: fixed;
   }
 
   ::selection {
-    @apply bg-red-900/50 text-white;
+    @apply bg-yellow-900/50 text-white;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply px-5 py-2.5 rounded-lg font-semibold bg-gradient-to-r from-red-600 via-red-700 to-red-900 text-white
-      hover:from-red-500 hover:via-red-600 hover:to-red-800 transition-all duration-200
+    @apply px-5 py-2.5 rounded-lg font-semibold bg-gradient-to-r from-yellow-600 via-yellow-700 to-amber-900 text-black
+      hover:from-yellow-500 hover:via-yellow-600 hover:to-amber-800 transition-all duration-200
       shadow-glow hover:shadow-glow-lg active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none;
   }
 
   .btn-danger {
-    @apply px-5 py-2.5 rounded-lg font-semibold bg-gradient-to-r from-red-800 to-black border border-red-900 text-white
-      hover:from-red-700 hover:to-red-950 transition-all duration-200 shadow-lg active:scale-[0.98] disabled:opacity-40;
+    @apply px-5 py-2.5 rounded-lg font-semibold bg-gradient-to-r from-amber-800 to-black border border-yellow-900 text-white
+      hover:from-amber-700 hover:to-yellow-950 transition-all duration-200 shadow-lg active:scale-[0.98] disabled:opacity-40;
   }
 
   .btn-secondary {
     @apply px-5 py-2.5 rounded-lg font-semibold bg-black/60 border border-mob-border text-gray-200
-      hover:border-red-700 hover:bg-red-950/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-40;
+      hover:border-yellow-700 hover:bg-yellow-950/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-40;
   }
 
   .card {
     @apply bg-mob-card/90 border border-mob-border/80 rounded-xl p-5 shadow-card
-      transition-all duration-200 hover:border-red-900/60;
+      transition-all duration-200 hover:border-yellow-800/60;
   }
 
   .card-premium {
-    @apply card border-red-800/40 bg-gradient-to-br from-[#1a0000]/90 via-mob-card to-black/80;
+    @apply card border-yellow-800/40 bg-gradient-to-br from-[#1a1500]/90 via-mob-card to-black/80;
   }
 
   .stat-bar {
-    @apply h-2.5 rounded-full bg-black border border-red-950 overflow-hidden;
+    @apply h-2.5 rounded-full bg-black border border-yellow-950 overflow-hidden;
   }
 
   .stat-fill-energy { @apply h-full bg-gradient-to-r from-blue-800 to-blue-500 transition-all duration-500; }
   .stat-fill-stamina { @apply h-full bg-gradient-to-r from-green-800 to-green-500 transition-all duration-500; }
   .stat-fill-health { @apply h-full bg-gradient-to-r from-red-700 to-red-500 transition-all duration-500; }
-  .stat-fill-xp { @apply h-full bg-gradient-to-r from-red-900 to-red-500 transition-all duration-500; }
+  .stat-fill-xp { @apply h-full bg-gradient-to-r from-yellow-800 to-yellow-400 transition-all duration-500; }
 
   .nav-tab {
     @apply flex flex-col items-center gap-1 px-3 py-2 text-xs text-gray-500 transition-all duration-200 rounded-lg;
   }
 
   .nav-tab.active {
-    @apply text-red-400 bg-red-950/50 border border-red-900/40;
+    @apply text-yellow-400 bg-yellow-950/50 border border-yellow-900/40;
   }
 
   .nav-scroll {
@@ -78,157 +78,100 @@
   .item-grid { @apply grid grid-cols-2 sm:grid-cols-3 gap-4; }
 
   .item-img {
-    @apply w-24 h-24 rounded-lg object-contain bg-black border border-red-950/50 p-1
+    @apply w-24 h-24 rounded-lg object-contain bg-black border border-yellow-950/50 p-1
       shadow-item transition-transform duration-200 group-hover:scale-105 flex-shrink-0;
   }
   .item-img-sm {
-    @apply w-20 h-20 rounded-lg object-contain bg-black border border-red-950/50 p-0.5 shadow-item flex-shrink-0;
+    @apply w-20 h-20 rounded-lg object-contain bg-black border border-yellow-950/50 p-0.5 shadow-item flex-shrink-0;
   }
   .item-img-lg {
-    @apply w-40 h-40 rounded-xl object-contain bg-black border border-red-950/50 p-1 shadow-item;
+    @apply w-40 h-40 rounded-xl object-contain bg-black border border-yellow-950/50 p-1 shadow-item;
   }
 
   .glass-header {
-    @apply sticky top-0 z-40 bg-black/90 backdrop-blur-xl border-b border-red-900/50;
+    @apply sticky top-0 z-40 bg-black/90 backdrop-blur-xl border-b border-yellow-900/50;
   }
 
   .glass-nav {
-    @apply fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-xl border-t border-red-900/50 z-40;
+    @apply fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-xl border-t border-yellow-900/50 z-40;
   }
 
-  /* Original iMobsters (Storm8) layout */
+  /* True Mobsters black & gold layout */
   .imob-app {
-    background: linear-gradient(180deg, #0a0a0a 0%, #120000 40%, #0a0a0a 100%);
+    background: linear-gradient(180deg, #0a0a0a 0%, #0f0d00 40%, #0a0a0a 100%);
   }
 
   .imob-hud {
-    @apply bg-black border-b-2 border-red-950 px-3 pt-2 pb-2;
-    background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%231a0000' fill-opacity='0.4'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
+    @apply bg-black border-b-2 border-yellow-950 px-3 pt-2 pb-2;
+    background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%231a1500' fill-opacity='0.4'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
   }
 
-  .imob-hud-top {
-    @apply flex justify-between items-start gap-3;
-  }
-
-  .imob-cash {
-    @apply text-xl font-bold text-green-400 tabular-nums leading-tight;
-  }
-
-  .imob-cashflow {
-    @apply text-xs tabular-nums mt-0.5;
-  }
-
-  .imob-exp-block {
-    @apply flex-1 max-w-[55%];
-  }
-
-  .imob-level {
-    @apply text-2xl font-bold text-red-500 leading-none;
-  }
-
-  .imob-exp-bar {
-    @apply h-2 rounded-full bg-black border border-red-950 overflow-hidden;
-  }
-
-  .imob-exp-fill {
-    @apply h-full bg-gradient-to-r from-yellow-700 to-yellow-400 transition-all duration-500;
-  }
-
-  .imob-stat-row {
-    @apply grid grid-cols-3 gap-1 mt-2 py-2 border-t border-red-950/60;
-  }
-
-  .imob-stat {
-    @apply flex flex-col items-center text-center;
-  }
-
-  .imob-stat-icon {
-    @apply text-sm;
-  }
-
-  .imob-stat-val {
-    @apply text-[11px] text-white font-semibold tabular-nums;
-  }
-
-  .imob-stat-timer {
-    @apply text-[10px] text-gray-500 tabular-nums min-h-[14px];
-  }
-
-  .imob-warning {
-    @apply mt-2 p-3 border border-white/30 bg-black/80 rounded;
-  }
+  .imob-hud-top { @apply flex justify-between items-start gap-3; }
+  .imob-cash { @apply text-xl font-bold text-green-400 tabular-nums leading-tight; }
+  .imob-cashflow { @apply text-xs tabular-nums mt-0.5; }
+  .imob-exp-block { @apply flex-1 max-w-[55%]; }
+  .imob-level { @apply text-2xl font-bold text-mob-gold leading-none; }
+  .imob-exp-bar { @apply h-2 rounded-full bg-black border border-yellow-950 overflow-hidden; }
+  .imob-exp-fill { @apply h-full bg-gradient-to-r from-yellow-700 to-yellow-400 transition-all duration-500; }
+  .imob-stat-row { @apply grid grid-cols-3 gap-1 mt-2 py-2 border-t border-yellow-950/60; }
+  .imob-stat { @apply flex flex-col items-center text-center; }
+  .imob-stat-icon { @apply text-sm; }
+  .imob-stat-val { @apply text-[11px] text-white font-semibold tabular-nums; }
+  .imob-stat-timer { @apply text-[10px] text-gray-500 tabular-nums min-h-[14px]; }
+  .imob-warning { @apply mt-2 p-3 border border-yellow-800/40 bg-black/80 rounded; }
 
   .imob-banner {
-    @apply relative overflow-hidden rounded-lg border border-red-900/50;
-    background: linear-gradient(180deg, #1a0000 0%, #0a0a0a 60%, #120000 100%);
+    @apply relative overflow-hidden rounded-lg border border-yellow-900/50;
+    background: linear-gradient(180deg, #1a1500 0%, #0a0a0a 60%, #0f0d00 100%);
   }
 
   .imob-banner-inner {
     @apply flex items-stretch justify-between p-3 min-h-[140px];
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 60'%3E%3Cpath fill='%23330000' fill-opacity='0.3' d='M0 60 L20 40 L40 50 L60 30 L80 45 L100 25 L120 40 L140 20 L160 35 L180 15 L200 30 L200 60 Z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 60'%3E%3Cpath fill='%23332800' fill-opacity='0.3' d='M0 60 L20 40 L40 50 L60 30 L80 45 L100 25 L120 40 L140 20 L160 35 L180 15 L200 30 L200 60 Z'/%3E%3C/svg%3E");
     background-size: cover;
     background-position: bottom;
   }
 
-  .imob-banner-weapon {
-    @apply flex flex-col items-center justify-end w-[80px] flex-shrink-0;
-  }
-
-  .imob-banner-center {
-    @apply flex-1 flex flex-col items-center justify-center px-2;
-  }
-
-  .imob-banner-right {
-    @apply w-[90px] flex-shrink-0 flex flex-col justify-between py-1;
-  }
+  .imob-banner-weapon { @apply flex flex-col items-center justify-end w-[80px] flex-shrink-0; }
+  .imob-banner-center { @apply flex-1 flex flex-col items-center justify-center px-2; }
+  .imob-banner-right { @apply w-[90px] flex-shrink-0 flex flex-col justify-between py-1; }
 
   .imob-code-banner {
     @apply px-4 py-1 rounded;
-    background: linear-gradient(180deg, #7f1d1d 0%, #450a0a 100%);
-    border: 1px solid #991b1b;
+    background: linear-gradient(180deg, #92400e 0%, #451a03 100%);
+    border: 1px solid #b45309;
   }
 
   .imob-btn-primary {
-    @apply flex items-center justify-center py-4 px-2 rounded-lg font-display text-base font-semibold text-white text-center
-      border border-red-900 shadow-lg transition-all active:scale-[0.98];
-    background: linear-gradient(180deg, #991b1b 0%, #450a0a 50%, #1a0000 100%);
-    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    @apply flex items-center justify-center py-4 px-2 rounded-lg font-display text-base font-semibold text-black text-center
+      border border-yellow-800 shadow-lg transition-all active:scale-[0.98];
+    background: linear-gradient(180deg, #d4af37 0%, #92400e 50%, #1a1500 100%);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.15);
   }
 
   .imob-btn-primary:hover {
-    background: linear-gradient(180deg, #b91c1c 0%, #7f1d1d 50%, #450a0a 100%);
+    background: linear-gradient(180deg, #fbbf24 0%, #b45309 50%, #451a03 100%);
   }
 
   .imob-btn-secondary {
     @apply flex items-center justify-center py-2.5 px-1 rounded font-semibold text-[10px] text-gray-200 text-center
-      border border-red-950/80 bg-gradient-to-b from-[#1a1a1a] to-black min-h-[44px];
+      border border-yellow-950/80 bg-gradient-to-b from-[#1a1a1a] to-black min-h-[44px];
   }
 
   .imob-btn-secondary:hover {
-    @apply border-red-800 bg-red-950/30;
+    @apply border-yellow-700 bg-yellow-950/30;
   }
 
-  .imob-news-footer {
-    @apply border border-red-950 rounded overflow-hidden mt-2;
-  }
-
-  .imob-news-title {
-    @apply bg-black text-white text-xs font-bold tracking-[0.25em] text-center py-2 border-b border-red-950;
-  }
-
-  .imob-news-body {
-    @apply bg-black/80 px-3 max-h-36 overflow-y-auto;
-  }
-
-  .imob-fight-result {
-    @apply bg-black border-2 border-white/30 rounded-lg shadow-2xl;
-  }
+  .imob-news-footer { @apply border border-yellow-950 rounded overflow-hidden mt-2; }
+  .imob-news-title { @apply bg-black text-mob-gold text-xs font-bold tracking-[0.25em] text-center py-2 border-b border-yellow-950; }
+  .imob-news-body { @apply bg-black/80 px-3 max-h-36 overflow-y-auto; }
+  .imob-fight-result { @apply bg-black border-2 border-yellow-800/50 rounded-lg shadow-2xl; }
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: #0a0a0a; }
-::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #7f1d1d, #450a0a); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #991b1b; }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #92400e, #451a03); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #b45309; }
 
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(8px); }
@@ -241,7 +184,7 @@
   100% { background-position: 200% 0; }
 }
 .loading-shimmer {
-  background: linear-gradient(90deg, #141414 25%, #3f0000 50%, #141414 75%);
+  background: linear-gradient(90deg, #141414 25%, #3f2f00 50%, #141414 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }

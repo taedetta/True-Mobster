@@ -39,7 +39,7 @@ export default function SafehousePage() {
         <img src={uiAsset('hospital')} alt="" className="w-16 h-16 rounded-xl object-cover border border-mob-gold/30" />
         <div>
           <h2 className="font-display text-xl text-mob-gold">Safehouse</h2>
-          <p className="text-xs text-gray-400 mt-1">Jail bail, ice protection, and hospital — iMobsters style</p>
+          <p className="text-xs text-gray-400 mt-1">Jail bail, ice protection, and hospital</p>
         </div>
       </div>
 

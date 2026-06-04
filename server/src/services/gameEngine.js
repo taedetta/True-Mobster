@@ -1189,7 +1189,7 @@ export async function getRevengeList(userId) {
     (p.mob_size + COALESCE((SELECT COUNT(*) FROM mob_allies ma WHERE ma.user_id=p.user_id), 0)) AS effective_mob,
     cl.created_at as last_attack
     FROM combat_log cl JOIN players p ON p.user_id=cl.attacker_id
-    WHERE cl.defender_id=? AND cl.attacker_won=1 ORDER BY cl.created_at DESC LIMIT 20`, [userId]);
+    WHERE cl.defender_id=? AND cl.attacker_won=1 AND p.health>0 ORDER BY cl.created_at DESC LIMIT 20`, [userId]);
 }
 
 export async function getExecuteList(userId, limit = 20) {
@@ -1452,17 +1452,29 @@ export async function getFightList(userId, limit = 30) {
       (p.mob_size + COALESCE((SELECT COUNT(*) FROM mob_allies ma WHERE ma.user_id=p.user_id), 0)) AS effective_mob
      FROM players p JOIN users u ON u.id=p.user_id
      WHERE p.user_id!=? AND p.health>0 AND p.level BETWEEN ? AND ?
-     ORDER BY ABS(p.level - ?), p.respect DESC LIMIT ?`,
-    [userId, minLevel, maxLevel, player.level, limit * 3],
+     ORDER BY u.is_bot DESC, ABS(p.level - ?), p.respect DESC LIMIT ?`,
+    [userId, minLevel, maxLevel, player.level, limit * 5],
   );
   const now = Date.now();
-  return rows.filter((r) => {
+  const eligible = (r, useBracket) => {
     const em = Number(r.effective_mob || r.mob_size || 1);
-    if (em < bracket.min || em > bracket.max) return false;
+    if (useBracket && (em < bracket.min || em > bracket.max)) return false;
     if (r.iced_until && parseTime(r.iced_until) > now) return false;
     if (r.in_jail_until && parseTime(r.in_jail_until) > now) return false;
     return true;
-  }).slice(0, limit);
+  };
+  let results = rows.filter((r) => eligible(r, true)).slice(0, limit);
+  if (results.length < 5) {
+    const relaxed = rows.filter((r) => eligible(r, false));
+    const seen = new Set(results.map((r) => r.user_id));
+    for (const r of relaxed) {
+      if (seen.has(r.user_id)) continue;
+      results.push(r);
+      seen.add(r.user_id);
+      if (results.length >= limit) break;
+    }
+  }
+  return results;
 }
 
 export async function getHitlist() {

@@ -81,7 +81,7 @@ export default function HomePage() {
             <img
               src={state.avatar_url || '/assets/avatars/default_01.svg'}
               alt=""
-              className="w-20 h-24 object-cover rounded border-2 border-red-900/60 bg-black mx-auto"
+              className="w-20 h-24 object-cover rounded border-2 border-yellow-800/60 bg-black mx-auto"
             />
             <div className="imob-code-banner mt-2">
               <button type="button" onClick={copyCode} className="font-mono text-sm font-bold text-white tracking-widest">
@@ -147,7 +147,7 @@ export default function HomePage() {
       </div>
 
       <p className="text-[9px] text-center text-gray-600 pb-2">
-        True Mobsters v2.6.3 · iMobsters by Storm8
+        True Mobsters v2.6.4 · VisionIt Studio
       </p>
     </div>
   );
