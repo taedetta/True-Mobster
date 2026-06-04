@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 import { formatMoney } from '../api';
 import ItemImage from '../components/ItemImage';
@@ -33,6 +33,16 @@ export default function JobsPage() {
   const loc = catalog.locations.find((l) => l.id === location);
   const mastery = state.jobMastery || {};
 
+  useEffect(() => {
+    setLastLoot(null);
+  }, [location]);
+
+  useEffect(() => {
+    if (!lastLoot?.length) return undefined;
+    const timer = setTimeout(() => setLastLoot(null), 3500);
+    return () => clearTimeout(timer);
+  }, [lastLoot]);
+
   const runJob = async (job) => {
     setBusy(job.id);
     setLastLoot(null);
@@ -41,6 +51,7 @@ export default function JobsPage() {
       if (result?.success) {
         let msg = `Earned ${formatMoney(result.money)}!`;
         if (result.favorEarned) msg += ` +${result.favorEarned} Favor`;
+        if (result.levelResult?.leveled) msg += ` · Level ${result.levelResult.level}! Full refill.`;
         if (result.mastery?.leveledUp) msg += ` · Mastery Lv.${result.mastery.masteryLevel}!`;
         if (result.loot?.length) {
           msg += ` · Found ${result.loot.length} item(s)!`;
@@ -75,8 +86,8 @@ export default function JobsPage() {
       <p className="text-[10px] text-gray-500">Mastery Lv.1–4 at 10/25/50/100 completions. Jobs need gear (owned, not consumed) & mob — random equipment drops at your level.</p>
 
       {lastLoot?.length > 0 && (
-        <div className="card border-green-700/40 bg-green-900/10">
-          <p className="text-xs text-green-400 font-semibold mb-2">Loot found!</p>
+        <div className="card border-green-700/40 bg-green-900/10 animate-fade-up">
+          <p className="text-xs text-green-400 font-semibold mb-2">Loot found! (clears in a few seconds)</p>
           <div className="flex flex-wrap gap-2">
             {lastLoot.map((item) => (
               <div key={item.id} className="flex items-center gap-2 bg-mob-bg/50 rounded-lg p-2">

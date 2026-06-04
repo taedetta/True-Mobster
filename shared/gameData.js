@@ -4,7 +4,8 @@ export const STUDIO = 'VisionIt';
 export const GAME_NAME = 'True Mobsters';
 
 export const REGEN = { energySeconds: 165, staminaSeconds: 165, healthSeconds: 165 };
-export const LEVEL_XP = (level) => Math.floor(100 * Math.pow(level, 1.85));
+/** Slightly easier than default curve (~12% less XP per level). */
+export const LEVEL_XP = (level) => Math.floor(88 * Math.pow(level, 1.78));
 export const BASE_STATS = { maxEnergy: 10, maxStamina: 5, maxHealth: 100, attack: 1, defense: 1 };
 export const STAT_GROWTH_PER_LEVEL = { maxEnergy: 2, maxStamina: 1, maxHealth: 10 };
 export const SKILL_POINTS_PER_LEVEL = 6;
