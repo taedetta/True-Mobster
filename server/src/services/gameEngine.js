@@ -1245,7 +1245,6 @@ export async function buyGodfatherItem(userId, packId, quantity = 1) {
     return { pack, quantity: qty, favorSpent: totalCost };
   }
   if (pack.effect === 'gear') {
-    if (player.level < (pack.minLevel || 1)) throw new Error(`Need level ${pack.minLevel} for this item`);
     const grantQty = (pack.qty || 1) * qty;
     const granted = await grantInventoryItem(userId, pack.itemId, pack.category, grantQty);
     if (!granted) throw new Error('Could not grant item');

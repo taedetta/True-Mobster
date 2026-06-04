@@ -146,7 +146,7 @@ export default function HomePage() {
       </div>
 
       <p className="text-[9px] text-center text-gray-600 pb-2">
-        True Mobsters v2.8.2 · VisionIt Studio
+        True Mobsters v2.8.3 · VisionIt Studio
       </p>
     </div>
   );

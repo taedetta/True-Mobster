@@ -53,9 +53,8 @@ export default function GodfatherPage() {
           const statParts = [];
           if (gear?.attack > 0) statParts.push(`+${gear.attack} ATK`);
           if (gear?.defense > 0) statParts.push(`+${gear.defense} DEF`);
-          const levelOk = !pack.minLevel || state.level >= pack.minLevel;
           return (
-            <div key={pack.id} className={`card space-y-3 ${!levelOk ? 'opacity-60' : ''}`}>
+            <div key={pack.id} className="card space-y-3">
               <div className="flex justify-between items-start gap-3">
                 <div>
                   <p className="font-semibold text-sm">{pack.icon} {pack.name}</p>
@@ -64,9 +63,6 @@ export default function GodfatherPage() {
                   {pack.effect === 'mob' && <p className="text-xs text-red-300">+{(pack.amount || 1) * qty} mob</p>}
                   {pack.effect === 'gear' && statParts.length > 0 && (
                     <p className="text-xs text-mob-gold">{statParts.join(' · ')}</p>
-                  )}
-                  {pack.minLevel > 1 && (
-                    <p className={`text-[10px] mt-0.5 ${levelOk ? 'text-gray-500' : 'text-red-400'}`}>Lv.{pack.minLevel}+ required</p>
                   )}
                 </div>
               </div>
@@ -88,7 +84,7 @@ export default function GodfatherPage() {
                 <button
                   type="button"
                   className="btn-primary text-xs ml-auto flex-shrink-0"
-                  disabled={favor < cost || !levelOk}
+                  disabled={favor < cost}
                   onClick={() => buy(pack)}
                 >
                   Trade {cost} favor
