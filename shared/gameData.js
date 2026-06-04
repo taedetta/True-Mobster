@@ -48,9 +48,24 @@ export const REFERRAL_BONUS = 5000;
 /** Original iMobsters — single Attack action (no slap/fight/execute menu) */
 export const DEFAULT_FIGHT_TYPE = 'attack';
 export const FIGHT_TYPES = {
-  attack: { stamina: 1, xpWin: 15, xpLose: 5, money: [100, 500], respect: 2, damage: [10, 30], label: 'Attack' },
+  attack: {
+    stamina: 1,
+    xpWin: 15,
+    xpLose: 5,
+    money: [50, 500],
+    respect: 2,
+    damage: [10, 30],
+    label: 'Attack',
+  },
 };
 
+/** iMobsters: winner = higher equipped power (attacker ATK vs defender DEF) */
+export const FIGHT_BASE_POWER = 1;
+export const FIGHT_LEVEL_BONUS_EVERY = 20;
+export const FIGHT_MONEY_STEAL_MIN = 0.02;
+export const FIGHT_MONEY_STEAL_MAX = 0.12;
+export const FIGHT_MONEY_LOST_MIN = 0.01;
+export const FIGHT_MONEY_LOST_MAX = 0.06;
 export const FIGHT_GEAR_LOSS_RATE = 0.1;
 
 export const LOCATIONS = [
@@ -305,7 +320,7 @@ export const JOB_LOOT = {
   default: [{ itemId: 'consumable_health_kit', category: 'consumable', chance: 0.03, qty: [1, 1] }],
 };
 
-export const ASSET_VERSION = '2.6.5';
+export const ASSET_VERSION = '2.6.7';
 
 export function getMissionMasteryLevel(completions) {
   let level = 0;
@@ -389,6 +404,35 @@ export function getMobBracket(mobSize) {
   if (size <= 4) return { min: 1, max: 4 };
   const bracketIndex = Math.floor((size - 5) / 5);
   return { min: 5 + bracketIndex * 5, max: 9 + bracketIndex * 5 };
+}
+
+/**
+ * iMobsters fight power — gear × usable mob is primary; skills/collections add small bonuses.
+ * Attacker compares fightAttack vs defender fightDefense.
+ */
+export function calcFightAttackPower({ gearAttack = 0, level = 1, skillPoints = 0, colBonus = 0, crewBonus = 0, territoryBonus = 0 } = {}) {
+  const levelBonus = Math.floor(level / FIGHT_LEVEL_BONUS_EVERY);
+  const raw = FIGHT_BASE_POWER + levelBonus + gearAttack + skillPoints + colBonus;
+  return Math.max(1, Math.floor(raw * (1 + crewBonus + territoryBonus)));
+}
+
+export function calcFightDefensePower({ gearDefense = 0, level = 1, skillPoints = 0, colBonus = 0, crewBonus = 0, territoryBonus = 0 } = {}) {
+  const levelBonus = Math.floor(level / FIGHT_LEVEL_BONUS_EVERY);
+  const raw = FIGHT_BASE_POWER + levelBonus + gearDefense + skillPoints + colBonus;
+  return Math.max(1, Math.floor(raw * (1 + crewBonus + territoryBonus)));
+}
+
+/** Win chance from power ratio — strong gear advantage should almost always win (classic iMobsters). */
+export function calcFightWinChance(attackPower, defensePower) {
+  const atk = Math.max(1, attackPower);
+  const def = Math.max(1, defensePower);
+  const ratio = atk / def;
+  if (ratio >= 1.5) return Math.min(0.98, 0.85 + (ratio - 1.5) * 0.05);
+  if (ratio >= 1.15) return 0.78 + (ratio - 1.15) * 0.47;
+  if (ratio >= 1.0) return 0.55 + (ratio - 1.0) * 1.53;
+  if (ratio >= 0.85) return 0.35 + (ratio - 0.85) * 1.33;
+  if (ratio >= 0.67) return 0.12 + (ratio - 0.67) * 1.35;
+  return Math.max(0.02, ratio * 0.15);
 }
 
 /** The Godfather specialty shop — spend Favor Points (stored in players.gold column) */

@@ -10,6 +10,8 @@ import {
   generateReferralCode, GOLD_JOB_CHANCE, PROPERTY_MAX_STACK, DEFAULT_AVATARS, avatarUrl,
   MOB_USABLE_PER_LEVEL, getMobBracket, GODFATHER_STORE, GOLD_STORE, ECONOMY_TICK_MS, getItemById,
   ITEM_MAX_STACK, FIGHT_GEAR_LOSS_RATE, itemThumbnailPath, JOB_LOOT,
+  calcFightAttackPower, calcFightDefensePower, calcFightWinChance,
+  FIGHT_MONEY_STEAL_MIN, FIGHT_MONEY_STEAL_MAX, FIGHT_MONEY_LOST_MIN, FIGHT_MONEY_LOST_MAX,
   getMissionMasteryLevel, getMissionMasteryBonus, MISSION_MASTERY_THRESHOLDS,
   BOSS_FIGHT_HOURS, BOSS_MASTERY_KILLS,
   SKILL_POINTS_PER_LEVEL, STAMINA_SKILL_COST, CREW_SPEND_OPTIONS, HOSPITAL_HEAL_THRESHOLD,
@@ -90,10 +92,40 @@ export async function processPassiveEconomy(userId) {
   const incomeApplied = Math.floor((hourly.grossIncome + hourly.bonusIncome) * cappedTicks);
   const upkeepApplied = Math.floor(hourly.upkeep * cappedTicks);
   const net = incomeApplied - upkeepApplied;
-  const newMoney = Math.max(0, player.money + net);
+  let newMoney = player.money + net;
+  if (newMoney < 0) {
+    newMoney = await liquidateUpkeepGear(userId, newMoney);
+  }
   const newTick = new Date(lastTick + cappedTicks * ECONOMY_TICK_MS).toISOString();
-  await db.run('UPDATE players SET money=?, last_income_collect=? WHERE user_id=?', [newMoney, newTick, userId]);
+  await db.run('UPDATE players SET money=?, last_income_collect=? WHERE user_id=?', [Math.max(0, newMoney), newTick, userId]);
   return { ...hourly, ticksProcessed: cappedTicks, incomeApplied, upkeepApplied, netApplied: net };
+}
+
+/** iMobsters: sell upkeep gear automatically when broke and negative cashflow */
+async function liquidateUpkeepGear(userId, currentMoney) {
+  let money = currentMoney;
+  if (money >= 0) return money;
+  const inventory = await db.all('SELECT * FROM inventory WHERE user_id=?', [userId]);
+  const sellables = [];
+  for (const row of inventory) {
+    if (!['weapon', 'armor', 'vehicle'].includes(row.category)) continue;
+    const item = getItemById(row.item_id);
+    if (!item?.upkeep) continue;
+    const qty = Number(row.quantity || 1);
+    sellables.push({
+      row,
+      refund: Math.floor((item.price || 100) * SELL_BACK_RATIO) * qty,
+      upkeepRatio: item.upkeep / Math.max(1, item.price),
+    });
+  }
+  sellables.sort((a, b) => b.upkeepRatio - a.upkeepRatio);
+  for (const s of sellables) {
+    if (money >= 0) break;
+    await db.run('DELETE FROM inventory WHERE user_id=? AND item_id=? AND category=?',
+      [userId, s.row.item_id, s.row.category]);
+    money += s.refund;
+  }
+  return money;
 }
 
 function getCollectionBonus(inventory) {
@@ -207,8 +239,25 @@ function buildFightSideReport(player, inventory, crewMemberCount) {
   const mobAttack = weapons.total;
   const mobArmor = armor.total;
   const mobVehicle = vehicles.total;
-  const attack = Math.floor((player.attack_skill + mobAttack + colBonus.attack) * (1 + crewBonus + territoryBonus));
-  const defense = Math.floor((player.defense_skill + mobArmor + mobVehicle + colBonus.defense) * (1 + crewBonus + territoryBonus));
+  const gearDefense = mobArmor + mobVehicle;
+  const fightAttack = calcFightAttackPower({
+    gearAttack: mobAttack,
+    level: player.level,
+    skillPoints: player.attack_skill || 0,
+    colBonus: colBonus.attack,
+    crewBonus,
+    territoryBonus,
+  });
+  const fightDefense = calcFightDefensePower({
+    gearDefense,
+    level: player.level,
+    skillPoints: player.defense_skill || 0,
+    colBonus: colBonus.defense,
+    crewBonus,
+    territoryBonus,
+  });
+  const attack = fightAttack;
+  const defense = fightDefense;
   return {
     userId: player.user_id,
     name: player.display_name,
@@ -217,6 +266,8 @@ function buildFightSideReport(player, inventory, crewMemberCount) {
     effectiveMob,
     attack,
     defense,
+    fightAttack,
+    fightDefense,
     weapons: weapons.items,
     armor: armor.items,
     vehicles: vehicles.items,
@@ -262,20 +313,18 @@ function parseFightDetails(raw) {
 }
 
 export async function getCombatStats(player, crewMemberCount = 0, inventory = []) {
+  const side = buildFightSideReport(player, inventory, crewMemberCount);
   const crewBonus = Math.min(CREW_MAX_BONUS, crewMemberCount * CREW_BONUS_PER_MEMBER);
-  const effectiveMob = player.effective_mob_size ?? player.mob_size ?? 1;
-  const usableMob = Math.min(effectiveMob, (player.level || 1) * MOB_USABLE_PER_LEVEL);
-  const colBonus = getCollectionBonus(inventory);
-  const territoryBonus = player.territory_bonus ?? 0;
-  const mobAttack = calcGearStat(inventory, 'weapon', WEAPONS, 'attack', usableMob);
-  const mobArmor = calcGearStat(inventory, 'armor', ARMOR, 'defense', usableMob);
-  const mobVehicle = calcGearStat(inventory, 'vehicle', VEHICLES, 'defense', usableMob);
-  const attack = Math.floor((player.attack_skill + mobAttack + colBonus.attack) * (1 + crewBonus + territoryBonus));
-  const defense = Math.floor((player.defense_skill + mobArmor + mobVehicle + colBonus.defense) * (1 + crewBonus + territoryBonus));
   return {
-    attack, defense, crewBonus, mobBonus: usableMob / Math.max(1, effectiveMob),
-    usableMob, effectiveMob, collectionBonus: colBonus, territoryBonus,
-    gearUsed: { attack: mobAttack, armor: mobArmor, vehicle: mobVehicle },
+    attack: side.fightAttack,
+    defense: side.fightDefense,
+    crewBonus,
+    mobBonus: side.usableMob / Math.max(1, side.effectiveMob),
+    usableMob: side.usableMob,
+    effectiveMob: side.effectiveMob,
+    collectionBonus: getCollectionBonus(inventory),
+    territoryBonus: player.territory_bonus ?? 0,
+    gearUsed: side.gearTotals,
   };
 }
 
@@ -477,23 +526,27 @@ export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_F
   const atkReport = buildFightSideReport(attacker, invA, crewA);
   const defReport = buildFightSideReport(defender, invD, crewD);
   const atkStats = {
-    attack: atkReport.attack, defense: atkReport.defense, usableMob: atkReport.usableMob,
+    attack: atkReport.fightAttack, defense: atkReport.fightDefense, usableMob: atkReport.usableMob,
     effectiveMob: atkReport.effectiveMob, crewBonus: Math.min(CREW_MAX_BONUS, crewA * CREW_BONUS_PER_MEMBER),
     mobBonus: atkReport.usableMob / Math.max(1, atkReport.effectiveMob),
     gearUsed: atkReport.gearTotals,
   };
   const defStats = {
-    attack: defReport.attack, defense: defReport.defense, usableMob: defReport.usableMob,
+    attack: defReport.fightAttack, defense: defReport.fightDefense, usableMob: defReport.usableMob,
     effectiveMob: defReport.effectiveMob, crewBonus: Math.min(CREW_MAX_BONUS, crewD * CREW_BONUS_PER_MEMBER),
     mobBonus: defReport.usableMob / Math.max(1, defReport.effectiveMob),
     gearUsed: defReport.gearTotals,
   };
 
-  const powerRatio = atkStats.attack / Math.max(1, defStats.defense);
-  const winChance = Math.min(0.95, Math.max(0.05, 0.5 + (powerRatio - 1) * 0.25));
+  const attackerPower = atkReport.fightAttack;
+  const defenderPower = defReport.fightDefense;
+  const winChance = calcFightWinChance(attackerPower, defenderPower);
   const attackerWon = Math.random() < winChance;
 
-  let moneyStolen = 0, respectGained = 0, bountyClaimed = 0;
+  let moneyStolen = 0;
+  let moneyLost = 0;
+  let respectGained = 0;
+  let bountyClaimed = 0;
   let attackerItemsLost = [];
   let defenderItemsLost = [];
   let attackerDamageTaken = 0;
@@ -502,8 +555,12 @@ export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_F
 
   if (attackerWon) {
     defenderItemsLost = await applyFightGearLoss(defenderId, defReport);
-    moneyStolen = randomInt(ft.money[0], Math.min(ft.money[1], Math.floor(defender.money * 0.15)));
+    const pctSteal = randomInt(Math.floor(FIGHT_MONEY_STEAL_MIN * 100), Math.floor(FIGHT_MONEY_STEAL_MAX * 100)) / 100;
+    moneyStolen = Math.max(ft.money[0], Math.floor(defender.money * pctSteal));
     moneyStolen = Math.min(moneyStolen, defender.money);
+    if (moneyStolen < ft.money[0] && defender.money >= ft.money[0]) {
+      moneyStolen = Math.min(defender.money, randomInt(ft.money[0], ft.money[1]));
+    }
     respectGained = ft.respect;
     if (hitlistEntry) {
       bountyClaimed = Math.floor(hitlistEntry.bounty * HITLIST_BONUS_MULTIPLIER);
@@ -521,10 +578,16 @@ export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_F
     if (defender.is_bot) await scheduleBotRetaliation(defenderId, attackerId);
   } else {
     attackerItemsLost = await applyFightGearLoss(attackerId, atkReport);
+    const pctLost = randomInt(Math.floor(FIGHT_MONEY_LOST_MIN * 100), Math.floor(FIGHT_MONEY_LOST_MAX * 100)) / 100;
+    moneyLost = Math.max(0, Math.floor(attacker.money * pctLost));
+    moneyLost = Math.min(moneyLost, attacker.money);
+    if (moneyLost < 1 && attacker.money > 0) moneyLost = Math.min(attacker.money, randomInt(1, Math.max(1, ft.money[0])));
     attackerDamageTaken = randomInt(ft.damage[0] + 5, ft.damage[1] + 10);
     defenderDamageTaken = randomInt(1, Math.max(1, Math.floor(attackerDamageTaken / 5)));
-    await db.run('UPDATE players SET stamina=stamina-?, health=CASE WHEN health-? < 0 THEN 0 ELSE health-? END, losses=losses+1 WHERE user_id=?', [ft.stamina, attackerDamageTaken, attackerDamageTaken, attackerId]);
-    await db.run('UPDATE players SET health=CASE WHEN health-? < 0 THEN 0 ELSE health-? END WHERE user_id=?', [defenderDamageTaken, defenderDamageTaken, defenderId]);
+    await db.run('UPDATE players SET stamina=stamina-?, health=CASE WHEN health-? < 0 THEN 0 ELSE health-? END, money=CASE WHEN money-? < 0 THEN 0 ELSE money-? END, losses=losses+1 WHERE user_id=?',
+      [ft.stamina, attackerDamageTaken, attackerDamageTaken, moneyLost, moneyLost, attackerId]);
+    await db.run('UPDATE players SET money=money+?, health=CASE WHEN health-? < 0 THEN 0 ELSE health-? END WHERE user_id=?',
+      [moneyLost, defenderDamageTaken, defenderDamageTaken, defenderId]);
   }
 
   const xpGained = attackerWon ? ft.xpWin : ft.xpLose;
@@ -533,10 +596,13 @@ export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_F
     fightType: DEFAULT_FIGHT_TYPE,
     attackerWon: !!attackerWon,
     moneyStolen,
+    moneyLost,
     respectGained,
     bountyClaimed,
     killed: false,
     winChance: Math.round(winChance * 100),
+    attackerPower,
+    defenderPower,
     attackerDamageTaken,
     defenderDamageTaken,
     xpGained,
@@ -570,7 +636,7 @@ export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_F
     await sendMail(
       defenderId,
       'You were attacked!',
-      `${attacker.display_name} attacked you and won $${moneyStolen.toLocaleString()}. You lost: ${lossSummary(defenderItemsLost)}.`,
+      `${attacker.display_name} attacked you and won ${moneyStolen > 0 ? `$${moneyStolen.toLocaleString()}` : 'the fight'}. You lost: ${lossSummary(defenderItemsLost)}.`,
       'combat',
       { fightReport, role: 'defender', combatLogId: fightReport.combatLogId },
     );
@@ -578,7 +644,7 @@ export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_F
     await sendMail(
       defenderId,
       'Defense successful',
-      `${attacker.display_name} attacked you but failed! They lost: ${lossSummary(attackerItemsLost)}.`,
+      `${attacker.display_name} attacked you but failed${moneyLost > 0 ? ` and lost $${moneyLost.toLocaleString()}` : ''}! They lost: ${lossSummary(attackerItemsLost)}.`,
       'combat',
       { fightReport, role: 'defender', combatLogId: fightReport.combatLogId },
     );
@@ -586,7 +652,7 @@ export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_F
 
   await checkAchievements(attackerId);
   return {
-    attackerWon, moneyStolen, respectGained, bountyClaimed, killed: 0,
+    attackerWon, moneyStolen, moneyLost, respectGained, bountyClaimed, killed: 0,
     hitlistBonus: bountyClaimed > 0, atkStats, defStats,
     winChance: Math.round(winChance * 100), fightType: DEFAULT_FIGHT_TYPE, fightReport,
     combatLogId: fightReport.combatLogId,

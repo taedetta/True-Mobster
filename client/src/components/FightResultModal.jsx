@@ -80,6 +80,9 @@ export default function FightResultModal({
     : (report.defenderDamageTaken || 0);
   const xp = report.xpGained || 0;
   const money = perspective === 'attacker' && report.attackerWon ? (report.moneyStolen || 0) : 0;
+  const cashLost = perspective === 'attacker' && !report.attackerWon ? (report.moneyLost || 0) : 0;
+  const atkPower = report.attackerPower ?? report.attacker?.fightAttack ?? report.attacker?.attack;
+  const defPower = report.defenderPower ?? report.defender?.fightDefense ?? report.defender?.defense;
   const youLost = youSide?.itemsLost || [];
   const themLost = themSide?.itemsLost || [];
 
@@ -115,10 +118,17 @@ export default function FightResultModal({
                 {defId && perspective === 'attacker' ? (
                   <Link to={`/player/${defId}`} className="text-yellow-400 underline">{defName}</Link>
                 ) : defName}.
+                {cashLost > 0 ? <> You lost {formatMoney(cashLost)}.</> : null}
                 {' '}You gained {xp} experience points.
               </>
             )}
           </p>
+          {atkPower != null && defPower != null && (
+            <p className="text-[11px] text-gray-400 mt-2 text-center">
+              Your attack power {atkPower} vs their defense {defPower}
+              {report.winChance != null ? ` · ${report.winChance}% estimated odds` : ''}
+            </p>
+          )}
           {report.bountyClaimed > 0 && won && (
             <p className="text-xs text-green-400 mt-2 text-center">+ Hitlist bonus {formatMoney(report.bountyClaimed)}</p>
           )}

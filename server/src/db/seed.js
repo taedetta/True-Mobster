@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db from './index.js';
 import {
   BASE_STATS, STAT_GROWTH_PER_LEVEL, BOT_NAMES, WEAPONS, ARMOR, VEHICLES, generateReferralCode,
+  MOB_USABLE_PER_LEVEL,
 } from '../../../shared/gameData.js';
 
 const BOT_PASSWORD = bcrypt.hashSync('bot-internal-visionit-' + (process.env.JWT_SECRET || 'dev'), 10);
@@ -13,12 +14,39 @@ function xpForLevel(lvl) {
   return total;
 }
 
+async function equipBotGear(userId, level, mobSize) {
+  const tierWeapons = WEAPONS.filter((w) => w.minLevel <= level);
+  const tierArmor = ARMOR.filter((a) => a.minLevel <= level);
+  const tierVehicles = VEHICLES.filter((v) => v.minLevel <= level);
+  const bestWeapon = tierWeapons[Math.min(tierWeapons.length - 1, Math.floor(level / 8))];
+  const bestArmor = tierArmor[Math.min(tierArmor.length - 1, Math.floor(level / 8))];
+  const bestVehicle = tierVehicles[Math.min(tierVehicles.length - 1, Math.floor(level / 10))];
+  const usableMob = Math.min(mobSize, level * MOB_USABLE_PER_LEVEL);
+  const gearQty = Math.max(1, Math.min(usableMob, 50));
+
+  if (bestWeapon) {
+    await db.run('INSERT INTO inventory (user_id, item_id, category, quantity) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, item_id) DO UPDATE SET quantity=?',
+      [userId, bestWeapon.id, 'weapon', gearQty, gearQty]);
+    await db.run('UPDATE players SET equipped_weapon=? WHERE user_id=?', [bestWeapon.id, userId]);
+  }
+  if (bestArmor) {
+    await db.run('INSERT INTO inventory (user_id, item_id, category, quantity) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, item_id) DO UPDATE SET quantity=?',
+      [userId, bestArmor.id, 'armor', gearQty, gearQty]);
+    await db.run('UPDATE players SET equipped_armor=? WHERE user_id=?', [bestArmor.id, userId]);
+  }
+  if (bestVehicle) {
+    await db.run('INSERT INTO inventory (user_id, item_id, category, quantity) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, item_id) DO UPDATE SET quantity=?',
+      [userId, bestVehicle.id, 'vehicle', gearQty, gearQty]);
+    await db.run('UPDATE players SET equipped_vehicle=? WHERE user_id=?', [bestVehicle.id, userId]);
+  }
+}
+
 async function createBot(name, level, stats) {
   const existing = await db.get('SELECT id FROM users WHERE username = ?', [name]);
   if (existing) {
-    if (level <= 12) {
-      await db.run('UPDATE players SET mob_size=? WHERE user_id=?', [stats.mobSize, existing.id]);
-    }
+    await db.run(`UPDATE players SET mob_size=?, attack_skill=?, defense_skill=? WHERE user_id=?`,
+      [stats.mobSize, stats.attack, stats.defense, existing.id]);
+    await equipBotGear(existing.id, level, stats.mobSize);
     return existing.id;
   }
 
@@ -40,25 +68,7 @@ async function createBot(name, level, stats) {
     [level, xpForLevel(level), stats.respect, stats.money, stats.mobSize, stats.gold,
       maxE, maxE, maxS, maxS, maxH, maxH, stats.attack, stats.defense, stats.wins, stats.losses, id]);
 
-  const tierWeapons = WEAPONS.filter((w) => w.minLevel <= level);
-  const tierArmor = ARMOR.filter((a) => a.minLevel <= level);
-  const tierVehicles = VEHICLES.filter((v) => v.minLevel <= level);
-  const bestWeapon = tierWeapons[Math.min(tierWeapons.length - 1, Math.floor(level / 8))];
-  const bestArmor = tierArmor[Math.min(tierArmor.length - 1, Math.floor(level / 8))];
-  const bestVehicle = tierVehicles[Math.min(tierVehicles.length - 1, Math.floor(level / 10))];
-
-  if (bestWeapon) {
-    await db.run('INSERT INTO inventory (user_id, item_id, category) VALUES (?, ?, ?) ON CONFLICT(user_id, item_id) DO NOTHING', [id, bestWeapon.id, 'weapon']);
-    await db.run('UPDATE players SET equipped_weapon=? WHERE user_id=?', [bestWeapon.id, id]);
-  }
-  if (bestArmor) {
-    await db.run('INSERT INTO inventory (user_id, item_id, category) VALUES (?, ?, ?) ON CONFLICT(user_id, item_id) DO NOTHING', [id, bestArmor.id, 'armor']);
-    await db.run('UPDATE players SET equipped_armor=? WHERE user_id=?', [bestArmor.id, id]);
-  }
-  if (bestVehicle) {
-    await db.run('INSERT INTO inventory (user_id, item_id, category) VALUES (?, ?, ?) ON CONFLICT(user_id, item_id) DO NOTHING', [id, bestVehicle.id, 'vehicle']);
-    await db.run('UPDATE players SET equipped_vehicle=? WHERE user_id=?', [bestVehicle.id, id]);
-  }
+  await equipBotGear(id, level, stats.mobSize);
   return id;
 }
 
@@ -74,8 +84,8 @@ export async function seedBots() {
       money: level * 8000 + Math.floor(Math.random() * 20000),
       gold: Math.floor(level / 5),
       mobSize,
-      attack: Math.max(1, Math.floor(level * 0.8)),
-      defense: Math.max(1, Math.floor(level * 0.7)),
+      attack: Math.min(8, 1 + Math.floor(level / 20)),
+      defense: Math.min(8, 1 + Math.floor(level / 20)),
       energySkill: Math.floor(level / 5),
       staminaSkill: Math.floor(level / 6),
       healthSkill: Math.floor(level / 4),
