@@ -35,6 +35,10 @@ export default function FightPage() {
   }, [location.state]);
 
   const fight = async (targetId, name) => {
+    if (state.health <= 0) {
+      showMessage('You need hospital treatment before you can fight!', 'error');
+      return;
+    }
     setBusy(targetId);
     try {
       const result = await action('/fight', { targetId });
@@ -65,11 +69,12 @@ export default function FightPage() {
 
   if (!state) return null;
 
+  const playerHospitalized = state.health <= 0;
   const bracket = state.mob_bracket;
 
   const renderTarget = (t) => {
-    const isHospitalized = (t.health ?? 100) <= 0;
-    const canAttack = !isHospitalized;
+    const targetHospitalized = (t.health ?? 100) <= 0;
+    const canAttack = !playerHospitalized && !targetHospitalized && state.stamina >= STAMINA_COST;
 
     return (
       <div key={t.user_id} className="card flex items-center gap-3">
@@ -80,17 +85,17 @@ export default function FightPage() {
           <Link to={`/player/${t.user_id}`} className="font-semibold text-sm hover:text-mob-gold">{t.display_name}</Link>
           {t.is_bot && <span className="text-xs text-gray-500"> (Bot)</span>}
           <p className="text-xs text-gray-400">Lv.{t.level} · {t.respect || 0} respect · Mob {t.effective_mob || t.mob_size}</p>
-          <p className={`text-xs ${isHospitalized ? 'text-red-500 font-bold' : 'text-red-400'}`}>
-            {isHospitalized ? '🏥 Hospitalized' : `HP ${t.health}/${t.max_health || 100}`}
+          <p className={`text-xs ${targetHospitalized ? 'text-red-500 font-bold' : 'text-red-400'}`}>
+            {targetHospitalized ? '🏥 Hospitalized' : `HP ${t.health}/${t.max_health || 100}`}
           </p>
         </div>
         <button
           type="button"
           className="btn-danger text-xs px-3 flex-shrink-0"
-          disabled={!canAttack || state.stamina < STAMINA_COST || busy === t.user_id}
+          disabled={!canAttack || busy === t.user_id}
           onClick={() => fight(t.user_id, t.display_name)}
         >
-          {busy === t.user_id ? '...' : 'Attack'}
+          {busy === t.user_id ? '...' : playerHospitalized ? 'Hospitalized' : 'Attack'}
         </button>
       </div>
     );
@@ -98,6 +103,14 @@ export default function FightPage() {
 
   return (
     <div className="space-y-4">
+      {playerHospitalized && (
+        <div className="imob-warning border-red-800/60">
+          <p className="text-red-400 font-bold text-sm">You are hospitalized!</p>
+          <p className="text-xs text-gray-300 mt-1">Heal at the hospital before attacking rivals.</p>
+          <Link to="/hospital" className="btn-primary text-xs mt-2 w-full block text-center">Go to Hospital</Link>
+        </div>
+      )}
+
       {fightResult && (
         <FightResultModal
           report={fightResult}

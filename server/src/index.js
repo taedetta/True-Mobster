@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
 import authRoutes from './routes/auth.js';
 import gameRoutes from './routes/game.js';
+import adminRoutes from './routes/admin.js';
 import { JWT_SECRET } from './middleware/auth.js';
 import { buildPlayerState, processBotRetaliations } from './services/gameEngine.js';
 import { sendChatMessage } from './services/chatEngine.js';
@@ -71,11 +72,12 @@ app.use('/assets/avatars', express.static(path.join(__dirname, '../../client/pub
 }));
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', game: GAME_NAME, studio: STUDIO, version: '2.6.5', deployedAt: new Date().toISOString() });
+  res.json({ status: 'ok', game: GAME_NAME, studio: STUDIO, version: '2.6.6', deployedAt: new Date().toISOString() });
 });
 
 app.use('/api/auth', authRoutes);
 app.use('/api/game', gameRoutes);
+app.use('/api/admin', adminRoutes);
 
 if (process.env.NODE_ENV === 'production') {
   const clientDist = path.join(__dirname, '../../client/dist');

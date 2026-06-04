@@ -137,6 +137,12 @@ export function ImobstersHud({ state }) {
         </div>
       )}
 
+      {state.health <= 0 && (
+        <Link to="/hospital" className="block mt-2 p-2 rounded border border-red-700/60 bg-red-950/50 text-center text-xs text-red-300 font-bold animate-pulse">
+          🏥 Hospitalized — tap to heal before fighting
+        </Link>
+      )}
+
       {(state.unreadMail > 0) && (
         <Link to="/mail" className="block mt-2 p-2 rounded border border-red-800/50 bg-red-950/30 text-center text-xs text-red-300">
           ⚔ {state.unreadMail} unread combat mail

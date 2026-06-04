@@ -22,12 +22,28 @@ function MobGearIcons({ side, label }) {
         {allItems.map((item) => (
           <div key={`${item.id}-${item.kind}`} className="text-center">
             <ItemImage src={item.thumbnail} alt={item.name} size="list" eager />
+            <p className="text-[9px] text-gray-500 truncate max-w-[72px]">{item.name}</p>
             <p className="text-[9px] text-gray-500">x{item.qtyUsed || 1}</p>
           </div>
         ))}
-        {(side.weapons?.length + side.armor?.length + side.vehicles?.length || 0) > allItems.length && (
-          <Link to="#" className="text-[10px] text-red-400 self-center" onClick={(e) => e.preventDefault()}>more</Link>
-        )}
+      </div>
+    </div>
+  );
+}
+
+function ItemsLostRow({ side, label }) {
+  const lost = side?.itemsLost || [];
+  if (lost.length === 0) return null;
+  return (
+    <div className="mt-2 p-2 rounded bg-red-950/40 border border-red-900/50">
+      <p className="text-[10px] text-red-300 font-semibold uppercase tracking-wide">{label} lost:</p>
+      <div className="flex flex-wrap gap-2 mt-1">
+        {lost.map((item) => (
+          <div key={`lost-${item.id}-${item.category}`} className="text-center opacity-80">
+            <ItemImage src={item.thumbnail} alt={item.name} size="list" eager />
+            <p className="text-[9px] text-red-400">-{item.qtyLost}x {item.name}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -48,8 +64,14 @@ export default function FightResultModal({
   if (!report) return null;
 
   const won = perspective === 'attacker' ? report.attackerWon : !report.attackerWon;
+  const youSide = perspective === 'attacker' ? report.attacker : report.defender;
+  const themSide = perspective === 'attacker' ? report.defender : report.attacker;
+  const youLabel = perspective === 'attacker' ? 'Your' : 'Your';
+  const themLabel = perspective === 'attacker'
+    ? `${opponentName || report.defenderName || 'Rival'}'s`
+    : `${opponentName || report.attacker?.name || 'Rival'}'s`;
   const defName = opponentName || report.defenderName || 'rival';
-  const defId = opponentId || report.defenderId;
+  const defId = perspective === 'attacker' ? (opponentId || report.defenderId) : report.attacker?.userId;
   const dmgDealt = perspective === 'attacker'
     ? (report.defenderDamageTaken || 0)
     : (report.attackerDamageTaken || 0);
@@ -57,7 +79,9 @@ export default function FightResultModal({
     ? (report.attackerDamageTaken || 0)
     : (report.defenderDamageTaken || 0);
   const xp = report.xpGained || 0;
-  const money = report.moneyStolen || 0;
+  const money = perspective === 'attacker' && report.attackerWon ? (report.moneyStolen || 0) : 0;
+  const youLost = youSide?.itemsLost || [];
+  const themLost = themSide?.itemsLost || [];
 
   const headline = won ? 'Eccellente!' : 'You lost!';
 
@@ -71,45 +95,54 @@ export default function FightResultModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 p-0 sm:p-4">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/85 p-0 sm:p-4">
       <div className="w-full max-w-lg max-h-[92vh] overflow-y-auto imob-fight-result animate-fade-up">
-        <div className="p-4 border-b border-white/20">
-          <h2 className={`font-display text-xl ${won ? 'text-green-400' : 'text-red-400'}`}>{headline}</h2>
-          <p className="text-sm text-gray-200 mt-2 leading-relaxed">
+        <div className="p-4 border-b border-yellow-900/40">
+          <h2 className={`font-display text-2xl text-center ${won ? 'text-green-400' : 'text-red-400'}`}>{headline}</h2>
+          <p className="text-sm text-gray-200 mt-3 leading-relaxed">
             {won ? (
               <>
                 You won the fight, taking {dmgTaken} damage while dealing {dmgDealt} damage to{' '}
-                {defId ? <Link to={`/player/${defId}`} className="text-red-400 underline">{defName}</Link> : defName}.
-                {' '}You took {formatMoney(money)} and gained {xp} experience points.
+                {defId && perspective === 'attacker' ? (
+                  <Link to={`/player/${defId}`} className="text-yellow-400 underline">{defName}</Link>
+                ) : defName}.
+                {money > 0 ? <> You took {formatMoney(money)}.</> : null}
+                {' '}You gained {xp} experience points.
               </>
             ) : (
               <>
                 You lost the fight, taking {dmgTaken} damage while dealing {dmgDealt} damage to{' '}
-                {defId ? <Link to={`/player/${defId}`} className="text-red-400 underline">{defName}</Link> : defName}.
+                {defId && perspective === 'attacker' ? (
+                  <Link to={`/player/${defId}`} className="text-yellow-400 underline">{defName}</Link>
+                ) : defName}.
+                {' '}You gained {xp} experience points.
               </>
             )}
           </p>
-          {report.bountyClaimed > 0 && (
-            <p className="text-xs text-green-400 mt-1">+ Hitlist bonus {formatMoney(report.bountyClaimed)}</p>
+          {report.bountyClaimed > 0 && won && (
+            <p className="text-xs text-green-400 mt-2 text-center">+ Hitlist bonus {formatMoney(report.bountyClaimed)}</p>
           )}
         </div>
 
-        <div className="p-4 space-y-1">
-          <MobGearIcons side={report.attacker} label="Your" />
-          <MobGearIcons side={report.defender} label={`${defName}'s`} />
+        <div className="p-4 space-y-1 bg-black/40">
+          <MobGearIcons side={youSide} label={youLabel} />
+          <ItemsLostRow side={youSide} label={youLabel} />
+          <MobGearIcons side={themSide} label={themLabel} />
+          <ItemsLostRow side={themSide} label={themLabel} />
+          {youLost.length === 0 && themLost.length === 0 && (
+            <p className="text-[10px] text-gray-500 text-center pt-2">No equipment lost this fight</p>
+          )}
         </div>
 
-        <div className="p-4 space-y-2 border-t border-white/10">
+        <div className="p-4 space-y-2 border-t border-yellow-900/30">
           {!commentSent && defId && perspective === 'attacker' && (
-            <div className="flex gap-2 mb-2">
-              <input
-                className="flex-1 px-3 py-2 rounded bg-black border border-red-950 text-sm"
-                placeholder="Leave a comment..."
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                maxLength={500}
-              />
-            </div>
+            <input
+              className="w-full px-3 py-2 rounded bg-black border border-yellow-950 text-sm mb-2"
+              placeholder="Leave a comment..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              maxLength={500}
+            />
           )}
           <div className="grid grid-cols-2 gap-2">
             {defId && perspective === 'attacker' && !commentSent && (
@@ -121,7 +154,7 @@ export default function FightResultModal({
               <p className="col-span-2 text-xs text-green-400 text-center">Comment posted!</p>
             )}
             {onAttackAgain && perspective === 'attacker' && (
-              <button type="button" className="imob-btn-secondary py-3" onClick={onAttackAgain}>
+              <button type="button" className="imob-btn-primary py-3" onClick={onAttackAgain}>
                 Attack Again
               </button>
             )}

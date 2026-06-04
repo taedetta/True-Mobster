@@ -13,7 +13,9 @@ export default function HospitalPage() {
   if (!state) return null;
 
   const missing = state.max_health - state.health;
+  const hospitalized = state.health <= 0;
   const belowThreshold = state.health / state.max_health < 0.6;
+  const canUseHospital = hospitalized || belowThreshold;
   const fullCost = missing * COST_PER_HP;
   const selectedHeal = healAmount ?? missing;
   const selectedCost = selectedHeal * COST_PER_HP;
@@ -29,7 +31,7 @@ export default function HospitalPage() {
         <img src={uiAsset('hospital')} alt="" className="w-16 h-16 rounded-xl object-cover bg-mob-bg border border-mob-border" />
         <div>
           <h2 className="font-display text-lg text-mob-gold">Hospital</h2>
-          <p className="text-xs text-gray-400">ER available below 60% HP — ${COST_PER_HP}/HP · or use Godfather favor</p>
+          <p className="text-xs text-gray-400">ER when hospitalized or below 60% HP — ${COST_PER_HP}/HP · or use Godfather favor</p>
         </div>
       </div>
 
@@ -47,7 +49,37 @@ export default function HospitalPage() {
 
         {missing <= 0 ? (
           <p className="text-center text-green-400 py-6">You&apos;re at full health. Get back out there, boss.</p>
-        ) : !belowThreshold ? (
+        ) : hospitalized ? (
+          <>
+            <p className="text-center text-red-400 font-bold text-sm mb-4">You are hospitalized and cannot fight until healed.</p>
+            <div className="space-y-2 mb-4">
+              <label className="text-xs text-gray-400">Heal amount</label>
+              <input
+                type="range"
+                min={1}
+                max={missing}
+                value={Math.min(selectedHeal, missing)}
+                onChange={(e) => setHealAmount(Number(e.target.value))}
+                className="w-full"
+              />
+              <div className="flex justify-between text-sm">
+                <span>{selectedHeal} HP</span>
+                <span className="text-mob-gold">{formatMoney(selectedCost)}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" className="btn-secondary text-sm" disabled={!canAfford || selectedHeal <= 0} onClick={() => heal(selectedHeal)}>
+                Heal {selectedHeal} HP
+              </button>
+              <button type="button" className="btn-primary text-sm" disabled={!canAfford || missing <= 0} onClick={() => heal(missing)}>
+                Full Heal · {formatMoney(fullCost)}
+              </button>
+            </div>
+            {!canAfford && (
+              <p className="text-xs text-red-400 mt-3 text-center">Need {formatMoney(selectedCost)} — you have {formatMoney(state.money)}</p>
+            )}
+          </>
+        ) : !canUseHospital ? (
           <p className="text-center text-amber-400 py-6 text-sm">
             Hospital only treats you below 60% HP. Wait for regen or visit <Link to="/godfather" className="text-red-300 underline">The Godfather</Link> for instant heal.
           </p>

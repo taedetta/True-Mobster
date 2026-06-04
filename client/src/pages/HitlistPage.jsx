@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { api, formatMoney } from '../api';
+import FightResultModal from '../components/FightResultModal';
 
 export default function HitlistPage() {
   const { state, action } = useGame();
@@ -10,6 +11,9 @@ export default function HitlistPage() {
   const [targetId, setTargetId] = useState('');
   const [bounty, setBounty] = useState(5000);
   const [busy, setBusy] = useState(null);
+  const [fightResult, setFightResult] = useState(null);
+  const [resultOpponent, setResultOpponent] = useState('');
+  const [resultOpponentId, setResultOpponentId] = useState(null);
 
   const refresh = () => {
     api('/game/hitlist').then(setHitlist);
@@ -24,9 +28,15 @@ export default function HitlistPage() {
   };
 
   const fightTarget = async (id, name) => {
+    if (state.health <= 0) return;
     setBusy(id);
     try {
-      await action('/fight', { targetId: id });
+      const result = await action('/fight', { targetId: id });
+      if (result?.fightReport) {
+        setFightResult(result.fightReport);
+        setResultOpponent(name);
+        setResultOpponentId(id);
+      }
     } catch { /* */ }
     setBusy(null);
     refresh();
@@ -36,6 +46,22 @@ export default function HitlistPage() {
 
   return (
     <div className="space-y-4">
+      {fightResult && (
+        <FightResultModal
+          report={fightResult}
+          perspective="attacker"
+          opponentName={resultOpponent}
+          opponentId={resultOpponentId || fightResult.defenderId}
+          onClose={() => { setFightResult(null); setResultOpponentId(null); }}
+          onAttackAgain={resultOpponentId ? () => {
+            const id = resultOpponentId;
+            const name = resultOpponent;
+            setFightResult(null);
+            fightTarget(id, name);
+          } : undefined}
+        />
+      )}
+
       <div className="card">
         <h2 className="font-display text-lg text-mob-gold mb-3">Place a Hit</h2>
         <select
@@ -75,7 +101,7 @@ export default function HitlistPage() {
             <button
               type="button"
               className="btn-danger text-xs px-3 flex-shrink-0"
-              disabled={busy === h.target_id || state.stamina < 1}
+              disabled={busy === h.target_id || state.stamina < 1 || state.health <= 0}
               onClick={() => fightTarget(h.target_id, h.target_name)}
             >
               {busy === h.target_id ? '...' : 'Fight'}

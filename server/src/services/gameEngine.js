@@ -588,7 +588,8 @@ export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_F
   return {
     attackerWon, moneyStolen, respectGained, bountyClaimed, killed: 0,
     hitlistBonus: bountyClaimed > 0, atkStats, defStats,
-    winChance: Math.round(winChance * 100), fightType: DEFAULT_FIGHT_TYPE, fightReport, combatLogId,
+    winChance: Math.round(winChance * 100), fightType: DEFAULT_FIGHT_TYPE, fightReport,
+    combatLogId: fightReport.combatLogId,
   };
 }
 
@@ -735,8 +736,9 @@ export async function healAtHospital(userId, healAmount = null) {
   const player = await getPlayerRow(userId);
   const missing = player.max_health - player.health;
   if (missing <= 0) throw new Error('Already at full health');
+  const hospitalized = player.health <= 0;
   const belowThreshold = player.health / player.max_health < HOSPITAL_HEAL_THRESHOLD;
-  if (!belowThreshold && healAmount === null) {
+  if (!hospitalized && !belowThreshold && healAmount === null) {
     throw new Error(`Hospital only available below ${Math.round(HOSPITAL_HEAL_THRESHOLD * 100)}% health — use Godfather or wait for regen`);
   }
   const amount = healAmount ? Math.min(Math.max(1, Math.floor(healAmount)), missing) : missing;
