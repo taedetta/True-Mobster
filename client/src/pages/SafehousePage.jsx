@@ -3,18 +3,19 @@ import { Link } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { formatMoney } from '../api';
 import { uiAsset } from '../utils/assets';
+import { formatCountdown } from '../utils/timeFormat';
 
 export default function SafehousePage() {
-  const { state, action } = useGame();
+  const { state, action, now } = useGame();
   const [iceHours, setIceHours] = useState(4);
   const [busy, setBusy] = useState(false);
 
   if (!state) return null;
 
-  const inJail = state.in_jail_until && new Date(state.in_jail_until) > new Date();
-  const bailMinutes = inJail ? Math.ceil((new Date(state.in_jail_until) - Date.now()) / 60000) : 0;
+  const inJail = state.in_jail_until && new Date(state.in_jail_until).getTime() > now;
+  const bailMinutes = inJail ? Math.max(1, Math.ceil((new Date(state.in_jail_until).getTime() - now) / 60000)) : 0;
   const bailCost = bailMinutes * 50;
-  const iced = state.iced_until && new Date(state.iced_until) > new Date();
+  const iced = state.iced_until && new Date(state.iced_until).getTime() > now;
   const iceCost = iceHours * 5000;
 
   const payBail = async () => {
@@ -46,7 +47,7 @@ export default function SafehousePage() {
       {inJail && (
         <div className="card border-red-800/50 bg-red-900/20">
           <h3 className="font-semibold text-red-300 mb-2">🔒 In Jail</h3>
-          <p className="text-sm text-gray-400">Release: {new Date(state.in_jail_until).toLocaleTimeString()}</p>
+          <p className="text-sm text-gray-400">Release in {formatCountdown(state.in_jail_until, now) || '0:00'}</p>
           <p className="text-lg font-bold text-mob-gold mt-2">Bail: {formatMoney(bailCost)}</p>
           <button type="button" className="btn-primary w-full mt-3" disabled={busy || state.money < bailCost} onClick={payBail}>
             Pay Bail
@@ -58,7 +59,7 @@ export default function SafehousePage() {
         <h3 className="font-semibold text-red-300 mb-2">Ice Protection</h3>
         <p className="text-xs text-gray-400 mb-3">While iced, rivals cannot attack you. Max 24 hours.</p>
         {iced && (
-          <p className="text-sm text-red-400 mb-2">Protected until {new Date(state.iced_until).toLocaleString()}</p>
+          <p className="text-sm text-red-400 mb-2">Protected — {formatCountdown(state.iced_until, now) || '0:00'} left</p>
         )}
         <div className="flex gap-2 items-center mb-3">
           <input

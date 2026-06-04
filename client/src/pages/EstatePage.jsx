@@ -3,9 +3,10 @@ import { useGame } from '../context/GameContext';
 import { ShopItemCard } from '../components/UI';
 import { formatMoney } from '../api';
 import { catalogItems } from '../utils/assets';
+import { formatCountdown } from '../utils/timeFormat';
 
 export default function EstatePage() {
-  const { catalog, state, action } = useGame();
+  const { catalog, state, action, now } = useGame();
 
   if (!catalog || !state) return null;
 
@@ -49,7 +50,9 @@ export default function EstatePage() {
             <p className="text-mob-gold font-bold">{formatMoney(eco.netIncome || 0)}</p>
           </div>
         </div>
-        <p className="text-[10px] text-gray-600 mt-3">Next auto deposit in ~{eco.minutesToTick ?? 60} min</p>
+        <p className="text-[10px] text-gray-600 mt-3">
+          Next auto deposit in {formatCountdown(eco.nextTickAt, now) || '--:--'}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-2">

@@ -3,23 +3,7 @@ import { formatMoney } from '../api';
 import ItemImage from './ItemImage';
 import { useGame } from '../context/GameContext';
 import { useState } from 'react';
-
-function formatIncomeTimer(nextTickAt) {
-  if (!nextTickAt) return '--:--';
-  const sec = Math.max(0, Math.ceil((new Date(nextTickAt).getTime() - Date.now()) / 1000));
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
-
-function formatRegenTimer(isoOrMs) {
-  if (!isoOrMs) return null;
-  const t = typeof isoOrMs === 'number' ? isoOrMs : new Date(isoOrMs).getTime();
-  const sec = Math.max(0, Math.ceil((t - Date.now()) / 1000));
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
+import { formatCountdown } from '../utils/timeFormat';
 
 
 
@@ -69,13 +53,14 @@ export function StatBar({ label, current, max, type = 'energy', icon }) {
 
 export function ImobstersHud({ state }) {
   if (!state) return null;
-  const { action } = useGame();
+  const { action, now } = useGame();
   const [bailing, setBailing] = useState(false);
   const eco = state.economy || {};
   const net = eco.netIncome || 0;
   const xpPct = state.xpNeeded > 0 ? Math.min(100, (state.xp / state.xpNeeded) * 100) : 0;
-  const inJail = state.in_jail_until && new Date(state.in_jail_until) > new Date();
-  const bailMinutes = inJail ? Math.ceil((new Date(state.in_jail_until) - Date.now()) / 60000) : 0;
+  const inJail = state.in_jail_until && new Date(state.in_jail_until).getTime() > now;
+  const bailMinutes = inJail ? Math.max(1, Math.ceil((new Date(state.in_jail_until).getTime() - now) / 60000)) : 0;
+  const iced = state.iced_until && new Date(state.iced_until).getTime() > now;
   const bailCost = bailMinutes * 50;
   const favor = state.favor_points ?? state.gold ?? 0;
 
@@ -96,7 +81,7 @@ export function ImobstersHud({ state }) {
         <div>
           <p className="imob-cash">{formatMoney(state.money)}</p>
           <p className={`imob-cashflow ${cashflowColor}`}>
-            {cashflowSign}{formatMoney(Math.abs(net))} in {formatIncomeTimer(eco.nextTickAt)}
+            {cashflowSign}{formatMoney(Math.abs(net))} in {formatCountdown(eco.nextTickAt, now) || '--:--'}
           </p>
         </div>
         <div className="imob-exp-block">
@@ -114,17 +99,17 @@ export function ImobstersHud({ state }) {
         <div className="imob-stat">
           <span className="imob-stat-icon text-red-400">❤</span>
           <span className="imob-stat-val">{state.health} / {state.max_health}</span>
-          <span className="imob-stat-timer">{formatRegenTimer(state.regenAt?.health) || ''}</span>
+          <span className="imob-stat-timer">{formatCountdown(state.regenAt?.health, now) || ''}</span>
         </div>
         <div className="imob-stat">
           <span className="imob-stat-icon text-blue-400">⚡</span>
           <span className="imob-stat-val">{state.energy} / {state.max_energy}</span>
-          <span className="imob-stat-timer">{formatRegenTimer(state.regenAt?.energy) || ''}</span>
+          <span className="imob-stat-timer">{formatCountdown(state.regenAt?.energy, now) || ''}</span>
         </div>
         <div className="imob-stat">
           <span className="imob-stat-icon text-amber-600">🔨</span>
           <span className="imob-stat-val">{state.stamina} / {state.max_stamina}</span>
-          <span className="imob-stat-timer">{formatRegenTimer(state.regenAt?.stamina) || ''}</span>
+          <span className="imob-stat-timer">{formatCountdown(state.regenAt?.stamina, now) || ''}</span>
         </div>
       </div>
 
@@ -151,16 +136,16 @@ export function ImobstersHud({ state }) {
 
       {inJail && (
         <div className="mt-2 p-2 bg-red-950/40 border border-red-800/50 rounded text-xs text-red-300 text-center space-y-2">
-          <p>🔒 In jail until {new Date(state.in_jail_until).toLocaleTimeString()}</p>
+          <p>🔒 In jail — {formatCountdown(state.in_jail_until, now) || '0:00'} left</p>
           <button type="button" className="btn-primary text-xs w-full" disabled={bailing || state.money < bailCost} onClick={payBail}>
             {bailing ? 'Paying...' : `Pay Bail $${bailCost.toLocaleString()}`}
           </button>
         </div>
       )}
 
-      {state.iced_until && new Date(state.iced_until) > new Date() && (
+      {iced && (
         <div className="mt-2 p-2 bg-red-950/30 border border-red-800/40 rounded text-xs text-red-300 text-center">
-          Ice protection until {new Date(state.iced_until).toLocaleTimeString()}
+          Ice protection — {formatCountdown(state.iced_until, now) || '0:00'} left
         </div>
       )}
 
