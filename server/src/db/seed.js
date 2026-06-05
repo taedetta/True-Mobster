@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db from './index.js';
 import {
   BASE_STATS, STAT_GROWTH_PER_LEVEL, BOT_NAMES, WEAPONS, ARMOR, VEHICLES, generateReferralCode,
-  MOB_USABLE_PER_LEVEL,
+  MOB_USABLE_PER_LEVEL, MOB_GEAR_FULL_SLOTS,
 } from '../../../shared/gameData.js';
 
 const BOT_PASSWORD = bcrypt.hashSync('bot-internal-visionit-' + (process.env.JWT_SECRET || 'dev'), 10);
@@ -22,7 +22,7 @@ async function equipBotGear(userId, level, mobSize) {
   const bestArmor = tierArmor[Math.min(tierArmor.length - 1, Math.floor(level / 8))];
   const bestVehicle = tierVehicles[Math.min(tierVehicles.length - 1, Math.floor(level / 10))];
   const usableMob = Math.min(mobSize, level * MOB_USABLE_PER_LEVEL);
-  const gearQty = Math.max(1, Math.min(usableMob, 50));
+  const gearQty = Math.max(1, Math.min(usableMob, MOB_GEAR_FULL_SLOTS + Math.floor(level / 4)));
 
   if (bestWeapon) {
     await db.run('INSERT INTO inventory (user_id, item_id, category, quantity) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, item_id) DO UPDATE SET quantity=?',

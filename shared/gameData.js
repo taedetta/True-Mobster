@@ -65,6 +65,22 @@ export const FIGHT_TYPES = {
 
 /** iMobsters: winner = higher equipped power (attacker ATK vs defender DEF) */
 export const FIGHT_BASE_POWER = 1;
+/** First N mob members use full gear stats; extra mob fight at reduced efficiency (quality > headcount). */
+export const MOB_GEAR_FULL_SLOTS = 8;
+export const MOB_GEAR_EXTRA_FACTOR = 0.6;
+
+/** Scale linear gear sum — large mobs with weak stacks do not dominate well-geared small mobs. */
+export function scaleMobGearPower(totalStat, usableMob) {
+  const total = Math.max(0, Number(totalStat) || 0);
+  const mob = Math.max(0, Math.floor(Number(usableMob) || 0));
+  if (!mob || !total) return 0;
+  const avg = total / mob;
+  let eff = 0;
+  for (let i = 0; i < mob; i++) {
+    eff += i < MOB_GEAR_FULL_SLOTS ? 1 : MOB_GEAR_EXTRA_FACTOR;
+  }
+  return Math.floor(avg * eff);
+}
 export const FIGHT_LEVEL_BONUS_EVERY = 20;
 export const FIGHT_MONEY_STEAL_MIN = 0.02;
 export const FIGHT_MONEY_STEAL_MAX = 0.12;
@@ -522,8 +538,8 @@ export function getMobBracket(mobSize) {
 }
 
 /**
- * iMobsters fight power — gear × usable mob is primary; skills/collections add small bonuses.
- * Attacker compares fightAttack vs defender fightDefense.
+ * iMobsters fight power — scaled gear + skills; mob size alone does not guarantee wins.
+ * Attacker compares fightAttack vs defender fightDefense, with overall combat as a tie-breaker.
  */
 export function calcFightAttackPower({ gearAttack = 0, level = 1, skillPoints = 0, colBonus = 0, crewBonus = 0, territoryBonus = 0 } = {}) {
   const levelBonus = Math.floor(level / FIGHT_LEVEL_BONUS_EVERY);
@@ -537,11 +553,15 @@ export function calcFightDefensePower({ gearDefense = 0, level = 1, skillPoints 
   return Math.max(1, Math.floor(raw * (1 + crewBonus + territoryBonus)));
 }
 
-/** Win chance from power ratio — strong gear advantage should almost always win (classic iMobsters). */
-export function calcFightWinChance(attackPower, defensePower) {
+/** Win chance from attack vs defense, blended with total combat (gear ATK+DEF + skills on both sides). */
+export function calcFightWinChance(attackPower, defensePower, attackerCombat = null, defenderCombat = null) {
   const atk = Math.max(1, attackPower);
   const def = Math.max(1, defensePower);
-  const ratio = atk / def;
+  let ratio = atk / def;
+  if (attackerCombat != null && defenderCombat != null) {
+    const overall = Math.max(0.05, attackerCombat / Math.max(1, defenderCombat));
+    ratio = Math.sqrt(ratio) * Math.sqrt(overall);
+  }
   if (ratio >= 1.5) return Math.min(0.98, 0.85 + (ratio - 1.5) * 0.05);
   if (ratio >= 1.15) return 0.78 + (ratio - 1.15) * 0.47;
   if (ratio >= 1.0) return 0.55 + (ratio - 1.0) * 1.53;
@@ -568,8 +588,8 @@ export function rollScaledByLevel(level, baseMin, baseMax, perLevelGrowth = 0.1,
   return rollInRange(min, max, rng);
 }
 
-export function resolveFightRoll(attackPower, defensePower, rng = Math.random) {
-  const baseChance = calcFightWinChance(attackPower, defensePower);
+export function resolveFightRoll(attackPower, defensePower, attackerCombat = null, defenderCombat = null, rng = Math.random) {
+  const baseChance = calcFightWinChance(attackPower, defensePower, attackerCombat, defenderCombat);
   const jitter = (rng() - 0.5) * 0.06;
   const rollChance = Math.min(0.98, Math.max(0.02, baseChance + jitter));
   return { attackerWon: rng() < rollChance, winChance: Math.round(baseChance * 100) };

@@ -11,7 +11,7 @@ import {
   MOB_USABLE_PER_LEVEL, getMobBracket, GODFATHER_STORE, GOLD_STORE, ECONOMY_TICK_MS, getItemById,
   ITEM_MAX_STACK, FIGHT_GEAR_LOSS_RATE, itemThumbnailPath, JOB_LOOT, JOB_RANDOM_GEAR_CHANCE,
   pickRandomJobGearDrop,
-  calcFightAttackPower, calcFightDefensePower,
+  calcFightAttackPower, calcFightDefensePower, scaleMobGearPower,
   resolveFightRoll, rollFightXp, rollFightRespect, rollFightMoneySteal, rollFightMoneyLost, rollFightDamage,
   rollMissionXp, rollMissionMoney, hitlistMinBounty, hitlistKillerBonus,
   getMissionMasteryLevel, getMissionMasteryBonus, MISSION_MASTERY_THRESHOLDS,
@@ -205,7 +205,13 @@ function allocateGearForFight(inventory, category, catalog, sortKey, usableMob) 
       return def ? { ...def, qty: Number(r.quantity || 1) } : null;
     })
     .filter(Boolean)
-    .sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0));
+    .sort((a, b) => {
+      const score = (item) => {
+        if (sortKey === 'attack') return (item.attack || 0) + (item.defense || 0) * 0.4;
+        return (item.defense || 0) + (item.attack || 0) * 0.4;
+      };
+      return score(b) - score(a);
+    });
 
   let remaining = usableMob;
   let attackTotal = 0;
@@ -248,12 +254,14 @@ function buildFightSideReport(player, inventory, crewMemberCount) {
   const weapons = allocateGearForFight(inventory, 'weapon', WEAPONS, 'attack', usableMob);
   const armor = allocateGearForFight(inventory, 'armor', ARMOR, 'defense', usableMob);
   const vehicles = allocateGearForFight(inventory, 'vehicle', VEHICLES, 'defense', usableMob);
-  let gearAttack = 0;
-  let gearDefense = 0;
+  let rawGearAttack = 0;
+  let rawGearDefense = 0;
   for (const group of [weapons, armor, vehicles]) {
-    gearAttack += group.attackTotal;
-    gearDefense += group.defenseTotal;
+    rawGearAttack += group.attackTotal;
+    rawGearDefense += group.defenseTotal;
   }
+  const gearAttack = scaleMobGearPower(rawGearAttack, usableMob);
+  const gearDefense = scaleMobGearPower(rawGearDefense, usableMob);
   const fightAttack = calcFightAttackPower({
     gearAttack,
     level: player.level,
@@ -288,6 +296,8 @@ function buildFightSideReport(player, inventory, crewMemberCount) {
     gearTotals: {
       attack: gearAttack,
       defense: gearDefense,
+      rawAttack: rawGearAttack,
+      rawDefense: rawGearDefense,
       weapons: weapons.attackTotal,
       armor: armor.defenseTotal,
       vehicles: vehicles.defenseTotal,
@@ -567,7 +577,9 @@ export async function resolveFight(attackerId, defenderId, fightType = DEFAULT_F
 
   const attackerPower = atkReport.fightAttack;
   const defenderPower = defReport.fightDefense;
-  const { attackerWon, winChance } = resolveFightRoll(attackerPower, defenderPower);
+  const attackerCombat = atkReport.fightAttack + atkReport.fightDefense;
+  const defenderCombat = defReport.fightAttack + defReport.fightDefense;
+  const { attackerWon, winChance } = resolveFightRoll(attackerPower, defenderPower, attackerCombat, defenderCombat);
 
   let moneyStolen = 0;
   let moneyLost = 0;

@@ -133,8 +133,11 @@ export default function FightResultModal({
           </p>
           {atkPower != null && defPower != null && (
             <p className="text-[11px] text-gray-400 mt-2 text-center">
-              Your attack power {atkPower} vs their defense {defPower}
-              {report.winChance != null ? ` · ${report.winChance}% estimated odds` : ''}
+              Your attack {atkPower} vs their defense {defPower}
+              {youSide?.gearTotals?.rawAttack != null && youSide.gearTotals.rawAttack !== youSide.gearTotals.attack && (
+                <> · gear {youSide.gearTotals.rawAttack}→{youSide.gearTotals.attack} ATK (mob cap)</>
+              )}
+              {report.winChance != null ? ` · ${report.winChance}% odds` : ''}
             </p>
           )}
           {report.bountyClaimed > 0 && won && (
