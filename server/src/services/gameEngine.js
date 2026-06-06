@@ -529,8 +529,8 @@ export async function doJob(userId, jobId) {
   const loot = [];
   let masteryResult = null;
   if (!failed) {
-    money = rollMissionMoney(player.level, job.money, masteryBonus.moneyMult);
-    xp = rollMissionXp(player.level, job.xp, masteryBonus.xpMult);
+    money = rollMissionMoney(player.level, job.money, masteryBonus.moneyMult, job.rewardMult || 1);
+    xp = rollMissionXp(player.level, job.xp, masteryBonus.xpMult, job.rewardMult || 1);
     if (Math.random() < GOLD_JOB_CHANCE) goldEarned = randomInt(1, 3) + masteryBonus.favorBonus;
     for (const drop of rollJobLoot(job, player.level)) {
       const granted = await grantInventoryItem(userId, drop.itemId, drop.category, drop.qty);

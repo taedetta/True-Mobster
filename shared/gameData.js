@@ -151,22 +151,37 @@ export const JOB_REQUIREMENTS = {
   syndicate_hit: { minMob: 50, items: [{ itemId: 'w_long_range_sniper', category: 'weapon', qty: 1 }, { itemId: 'a_warlord_plate', category: 'armor', qty: 1 }, { itemId: 'v_private_helicopter', category: 'vehicle', qty: 1 }] },
 };
 
+/** Pay multiplier from location unlock level + mission tier (later missions pay much more). */
+export function missionRewardMult(locationMinLevel, templateIndex) {
+  const locMult = 1 + Math.max(0, (locationMinLevel || 1) - 1) * 0.06;
+  const tierMult = 1 + Math.max(0, templateIndex || 0) * 0.1;
+  return locMult * tierMult;
+}
+
 export const JOBS = LOCATIONS.flatMap((loc, li) =>
-  JOB_TEMPLATES.map(([slug, name, energy, money, xp, failRate, jailMinutes]) => {
+  JOB_TEMPLATES.map(([slug, name, energy, money, xp, failRate, jailMinutes], ti) => {
     const req = JOB_REQUIREMENTS[slug] || { minMob: 1, items: [] };
+    const mult = missionRewardMult(loc.minLevel, ti);
+    const scaledMoney = [
+      Math.max(1, Math.floor(money[0] * mult)),
+      Math.max(1, Math.floor(money[1] * mult)),
+    ];
+    const scaledXp = Math.max(1, Math.floor(xp * mult + ti * 4 + loc.minLevel * 0.4));
     return {
       id: `${loc.id}_${slug}`,
       artSlug: slug,
       location: loc.id,
       name: `${name} (${loc.name})`,
       energy,
-      money,
-      xp: xp + li * 2,
+      money: scaledMoney,
+      xp: scaledXp,
+      missionTier: ti + 1,
+      rewardMult: mult,
       failRate: Math.min(0.35, failRate + li * 0.01),
       jailMinutes,
       minMob: req.minMob + Math.floor(li / 2),
       requiredItems: req.items,
-      lootChance: Math.min(0.35, 0.05 + energy * 0.02),
+      lootChance: Math.min(0.35, 0.05 + energy * 0.02 + ti * 0.01),
     };
   }),
 );
@@ -651,14 +666,16 @@ export function rollFightDamage({
   return { attackerDamageTaken: loserDamage, defenderDamageTaken: winnerDamage };
 }
 
-export function rollMissionXp(playerLevel, jobBaseXp, masteryMult = 1, rng = Math.random) {
-  const [min, max] = levelScaleRange(playerLevel, Math.floor(jobBaseXp * 0.7), Math.floor(jobBaseXp * 1.4), 0.05);
-  return Math.floor(rollInRange(min, max, rng) * masteryMult);
+export function rollMissionXp(playerLevel, jobBaseXp, masteryMult = 1, rewardMult = 1, rng = Math.random) {
+  const tierBoost = 1 + Math.max(0, rewardMult - 1) * 0.15;
+  const [min, max] = levelScaleRange(playerLevel, Math.floor(jobBaseXp * 0.75), Math.floor(jobBaseXp * 1.35), 0.06);
+  return Math.floor(rollInRange(min, max, rng) * masteryMult * tierBoost);
 }
 
-export function rollMissionMoney(playerLevel, moneyRange, masteryMult = 1, rng = Math.random) {
-  const [min, max] = levelScaleRange(playerLevel, moneyRange[0], moneyRange[1], 0.04);
-  return Math.floor(rollInRange(min, max, rng) * masteryMult);
+export function rollMissionMoney(playerLevel, moneyRange, masteryMult = 1, rewardMult = 1, rng = Math.random) {
+  const tierBoost = 1 + Math.max(0, rewardMult - 1) * 0.12;
+  const [min, max] = levelScaleRange(playerLevel, moneyRange[0], moneyRange[1], 0.05);
+  return Math.floor(rollInRange(min, max, rng) * masteryMult * tierBoost);
 }
 
 export function hitlistMinBounty(targetLevel) {
