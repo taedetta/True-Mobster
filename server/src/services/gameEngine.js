@@ -9,7 +9,7 @@ import {
   DAILY_GIFTS_MAX, REFERRAL_BONUS, COLLECTIONS, BOT_NAMES, BASE_STATS, STAT_GROWTH_PER_LEVEL,
   generateReferralCode, GOLD_JOB_CHANCE, PROPERTY_MAX_STACK, DEFAULT_AVATARS, avatarUrl,
   MOB_USABLE_PER_LEVEL, getMobBracket, GODFATHER_STORE, GOLD_STORE, ECONOMY_TICK_MS, getItemById,
-  ITEM_MAX_STACK, FIGHT_GEAR_LOSS_RATE, itemThumbnailPath, JOB_LOOT, JOB_RANDOM_GEAR_CHANCE,
+  ITEM_MAX_STACK, FIGHT_GEAR_LOSS_CHANCE, FIGHT_GEAR_DOUBLE_LOSS_CHANCE, itemThumbnailPath, JOB_LOOT, JOB_RANDOM_GEAR_CHANCE,
   pickRandomJobGearDrop,
   calcFightAttackPower, calcFightDefensePower, scaleMobGearPower,
   resolveFightRoll, rollFightXp, rollFightRespect, rollFightMoneySteal, rollFightMoneyLost, rollFightDamage,
@@ -319,8 +319,9 @@ async function decrementInventory(userId, itemId, category, qty) {
 }
 
 async function applyFightGearLoss(userId, sideReport) {
-  const rate = FIGHT_GEAR_LOSS_RATE;
-  const lost = [];
+  if (Math.random() > FIGHT_GEAR_LOSS_CHANCE) return [];
+
+  const pools = [];
   const groups = [
     { key: 'weapons', category: 'weapon' },
     { key: 'armor', category: 'armor' },
@@ -329,10 +330,21 @@ async function applyFightGearLoss(userId, sideReport) {
   for (const { key, category } of groups) {
     for (const item of sideReport[key] || []) {
       if (!item.qtyUsed) continue;
-      const loseQty = Math.max(1, Math.floor(item.qtyUsed * rate));
-      const qtyLost = await decrementInventory(userId, item.id, category, loseQty);
-      if (qtyLost > 0) lost.push({ ...item, qtyLost });
+      pools.push({ item, category });
     }
+  }
+  if (!pools.length) return [];
+
+  for (let i = pools.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pools[i], pools[j]] = [pools[j], pools[i]];
+  }
+
+  const maxItems = Math.random() < FIGHT_GEAR_DOUBLE_LOSS_CHANCE ? 2 : 1;
+  const lost = [];
+  for (const { item, category } of pools.slice(0, maxItems)) {
+    const qtyLost = await decrementInventory(userId, item.id, category, 1);
+    if (qtyLost > 0) lost.push({ ...item, qtyLost: 1 });
   }
   return lost;
 }

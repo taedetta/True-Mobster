@@ -86,7 +86,12 @@ export const FIGHT_MONEY_STEAL_MIN = 0.02;
 export const FIGHT_MONEY_STEAL_MAX = 0.12;
 export const FIGHT_MONEY_LOST_MIN = 0.01;
 export const FIGHT_MONEY_LOST_MAX = 0.06;
-export const FIGHT_GEAR_LOSS_RATE = 0.1;
+/** Chance the fight loser drops any gear at all (most fights: nothing lost). */
+export const FIGHT_GEAR_LOSS_CHANCE = 0.22;
+/** Rare: lose 2 items instead of 1 when a drop occurs. */
+export const FIGHT_GEAR_DOUBLE_LOSS_CHANCE = 0.06;
+/** @deprecated use FIGHT_GEAR_LOSS_CHANCE */
+export const FIGHT_GEAR_LOSS_RATE = 0.04;
 
 export const LOCATIONS = [
   { id: 'downtown', name: 'Downtown', minLevel: 1, color: '#6366f1', city: 'Metro City' },
