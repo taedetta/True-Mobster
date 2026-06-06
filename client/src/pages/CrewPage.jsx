@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 
 import { api, formatMoney } from '../api';
+import PlayerLink from '../components/PlayerLink';
 
 
 
@@ -135,7 +136,13 @@ export default function CrewPage() {
 
                 <div>
 
-                  <span className={(m.crew_role || m.role) === 'leader' ? 'text-mob-gold' : ''}>{m.display_name}</span>
+                  <PlayerLink
+                    userId={m.user_id}
+                    name={m.display_name}
+                    avatarUrl={m.avatar_url}
+                    avatarClassName="w-5 h-5"
+                    className={(m.crew_role || m.role) === 'leader' ? 'text-mob-gold font-semibold text-xs' : 'text-xs'}
+                  />
 
                   {(m.crew_role || m.role) === 'leader' && <span className="text-mob-gold ml-1">👑</span>}
 

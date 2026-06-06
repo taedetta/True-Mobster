@@ -1144,7 +1144,12 @@ export async function removeFriend(userId, friendId) {
 }
 
 export async function getFriends(userId) {
-  return db.all(`SELECT p.user_id, p.display_name, p.level, p.respect FROM friends f JOIN players p ON p.user_id=f.friend_id WHERE f.user_id=?`, [userId]);
+  const rows = await db.all(
+    `SELECT p.user_id, p.display_name, p.level, p.respect, p.avatar_id, p.avatar_custom
+     FROM friends f JOIN players p ON p.user_id=f.friend_id WHERE f.user_id=?`,
+    [userId],
+  );
+  return rows.map(publicPlayerRow);
 }
 
 export async function sendGift(userId, friendId, giftType, amount) {
@@ -1314,13 +1319,20 @@ export async function updatePlayerLocale(userId, locale) {
   return { locale: code };
 }
 
+function publicPlayerRow(row) {
+  if (!row) return row;
+  const { is_bot, avatar_id, avatar_custom, ...rest } = row;
+  return { ...rest, avatar_url: avatarUrl({ avatar_id, avatar_custom }) };
+}
+
 export async function getRevengeList(userId) {
-  return db.all(`SELECT DISTINCT p.user_id, p.display_name, p.level, p.health, p.max_health,
-    p.respect, p.mob_size,
+  const rows = await db.all(`SELECT DISTINCT p.user_id, p.display_name, p.level, p.health, p.max_health,
+    p.respect, p.mob_size, p.avatar_id, p.avatar_custom,
     (p.mob_size + COALESCE((SELECT COUNT(*) FROM mob_allies ma WHERE ma.user_id=p.user_id), 0)) AS effective_mob,
     cl.created_at as last_attack
     FROM combat_log cl JOIN players p ON p.user_id=cl.attacker_id
     WHERE cl.defender_id=? AND cl.attacker_won=1 AND p.health>0 ORDER BY cl.created_at DESC LIMIT 20`, [userId]);
+  return rows.map(publicPlayerRow);
 }
 
 export async function getExecuteList(userId, limit = 20) {
@@ -1513,7 +1525,10 @@ export async function buildPlayerState(userId) {
   const crew = player.crew_id ? await db.get('SELECT * FROM crews WHERE id=?', [player.crew_id]) : null;
   if (crew) crew.treasury = crew.bank_balance;
   const crewMembers = player.crew_id
-    ? await db.all('SELECT p.display_name, p.level, p.respect, p.user_id, p.crew_role, p.crew_role as role FROM players p WHERE p.crew_id=? ORDER BY p.respect DESC LIMIT 50', [player.crew_id])
+    ? (await db.all(
+      'SELECT p.display_name, p.level, p.respect, p.user_id, p.crew_role, p.crew_role as role, p.avatar_id, p.avatar_custom FROM players p WHERE p.crew_id=? ORDER BY p.respect DESC LIMIT 50',
+      [player.crew_id],
+    )).map(publicPlayerRow)
     : [];
   const combat = await getCombatStats(player, await getCrewMemberCount(player.crew_id), inventory);
   const unreadMail = await db.get('SELECT COUNT(*) as c FROM mail WHERE user_id=? AND read_status=0', [userId]);
@@ -1535,8 +1550,9 @@ export async function buildPlayerState(userId) {
     .filter((i) => i && i.attack != null)
     .sort((a, b) => (b.attack || 0) - (a.attack || 0))[0];
   const weaponDisplay = equippedWeapon || bestOwnedWeapon;
+  const { is_bot, email, ...publicPlayer } = player;
   return {
-    ...player, is_bot: !!player.is_bot, inventory, crew, crewMembers, combat, mobAllies,
+    ...publicPlayer, inventory, crew, crewMembers, combat, mobAllies,
     effective_mob_size: effectiveMobSize,
     usable_mob_in_fight: Math.min(effectiveMobSize, (player.level || 1) * MOB_USABLE_PER_LEVEL),
     mob_bracket: mobBracket,
@@ -1583,8 +1599,8 @@ export async function getFightList(userId, limit = 30) {
   const minLevel = Math.max(1, player.level - 15);
   const maxLevel = player.level + 15;
   const rows = await db.all(
-    `SELECT p.user_id, p.display_name, p.level, p.respect, u.is_bot, p.wins, p.losses, p.health, p.max_health,
-      p.iced_until, p.in_jail_until, p.mob_size,
+    `SELECT p.user_id, p.display_name, p.level, p.respect, p.wins, p.losses, p.health, p.max_health,
+      p.iced_until, p.in_jail_until, p.mob_size, p.avatar_id, p.avatar_custom, u.is_bot,
       (p.mob_size + COALESCE((SELECT COUNT(*) FROM mob_allies ma WHERE ma.user_id=p.user_id), 0)) AS effective_mob
      FROM players p JOIN users u ON u.id=p.user_id
      WHERE p.user_id!=? AND p.health>0 AND p.level BETWEEN ? AND ?
@@ -1610,7 +1626,7 @@ export async function getFightList(userId, limit = 30) {
       if (results.length >= limit) break;
     }
   }
-  return results;
+  return results.map(publicPlayerRow);
 }
 
 export async function getHitlist() {
@@ -1620,7 +1636,11 @@ export async function getHitlist() {
 }
 
 export async function getLeaderboard(limit = 50) {
-  return db.all('SELECT display_name, level, respect, wins, losses, kills, user_id FROM players ORDER BY respect DESC, level DESC LIMIT ?', [limit]);
+  const rows = await db.all(
+    'SELECT display_name, level, respect, wins, losses, kills, user_id, avatar_id, avatar_custom FROM players ORDER BY respect DESC, level DESC LIMIT ?',
+    [limit],
+  );
+  return rows.map(publicPlayerRow);
 }
 
 export async function createCrew(userId, name, description = '') {

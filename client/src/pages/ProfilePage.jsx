@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PlayerLink from '../components/PlayerLink';
 import { useAuth } from '../context/AuthContext';
 import { useGame } from '../context/GameContext';import { api, formatMoney } from '../api';
 import { SUPPORTED_LANGUAGES } from '../../../shared/languages.js';
@@ -144,8 +145,15 @@ export default function ProfilePage() {
         <h3 className="font-semibold mb-3">🏆 Leaderboard</h3>
         <div className="space-y-1 max-h-64 overflow-y-auto">
           {leaderboard.map((p, i) => (
-            <div key={p.user_id} className={`flex justify-between text-xs py-1.5 border-b border-mob-border ${p.user_id === state.user_id ? 'text-mob-gold' : ''}`}>
-              <span>#{i + 1} {p.display_name}</span>
+            <div key={p.user_id} className={`flex justify-between items-center text-xs py-1.5 border-b border-mob-border ${p.user_id === state.user_id ? 'text-mob-gold' : ''}`}>
+              <span className="flex items-center gap-2 min-w-0">
+                <span className="text-gray-500 w-5">#{i + 1}</span>
+                {p.user_id === state.user_id ? (
+                  <span className="truncate">{p.display_name}</span>
+                ) : (
+                  <PlayerLink userId={p.user_id} name={p.display_name} avatarUrl={p.avatar_url} avatarClassName="w-5 h-5" />
+                )}
+              </span>
               <span className="text-gray-500">Lv.{p.level} · {p.respect} resp</span>
             </div>
           ))}

@@ -356,14 +356,21 @@ export const CREW_SPEND_OPTIONS = [
   { id: 'crew_income', name: 'Income Boost (+5%)', cost: 75000, effect: 'income', amount: 0.05, minLevel: 5 },
 ];
 
+/** Realistic player-style usernames for PvP filler accounts (no "bot" in names). */
 export const BOT_NAMES = [
-  'ShadowViper', 'IronFist', 'NightCrawler', 'CrimsonKing', 'GhostRunner',
-  'SteelWolf', 'BlackLotus', 'ViperStrike', 'DarkMercury', 'RogueHammer',
-  'SilentBlade', 'CopperFang', 'NeonReaper', 'StormBreaker', 'ObsidianJack',
-  'RapidCobra', 'GrimLedger', 'ChromeBoss', 'ZeroMerc', 'VaultHunter',
-  'BloodRaven', 'SilverTongue', 'DeathDealer', 'PhantomKing', 'RustyChain',
-  'ColdTrigger', 'NightBoss', 'ScarletAce', 'ToxicBlade', 'GraveDigger',
+  'TonyMancini', 'Maria_Rivas', 'VinnieG', 'JimmyTwoTimes', 'RosaDelgado',
+  'NickyB88', 'Carlo_Venezia', 'Elena_Kostas', 'MarcoReyes', 'LisaNYC',
+  'DerekMalone', 'CarlaBianchi', 'RickSantoro', 'NinaValdez', 'PaulieGems',
+  'FrankieLoc', 'SophieM', 'TommyC', 'AngieRossi', 'LouieCapo',
+  'SalRomano', 'GretaM', 'HectorV', 'CarmenLopez', 'BobbyStacks',
+  'DanielleK', 'MiguelS', 'PatriciaV', 'RayDon', 'ChristinaM',
+  'Joe_Barrett', 'AmandaS', 'ChrisDeluca', 'VanessaR', 'DannyBoy',
+  'LaurenM', 'KevinRusso', 'OliviaP', 'MarcD', 'JessicaL',
+  'GeorgeK', 'AshleyN', 'RobertVega', 'StephanieC', 'AnthonyB',
+  'NicoleF', 'VincentR', 'RachelTorres', 'MikeSerrano', 'LauraB',
 ];
+
+export const BOT_EMAIL_DOMAINS = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com'];
 
 export const ALL_ITEMS = [
   ...WEAPONS.map((i) => ({ ...i, category: 'weapon' })),

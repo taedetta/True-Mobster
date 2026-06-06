@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 import { formatMoney } from '../api';
+import PlayerLink from '../components/PlayerLink';
 
 const GIFT_TYPES = [
   { id: 'money', label: 'Cash', icon: '💵' },
@@ -62,10 +63,13 @@ export default function SocialPage() {
           </div>
           <div className="space-y-2">
             {friends.map((f) => (
-              <div key={f.id || f.user_id} className="card flex justify-between items-center">
-                <div>
-                  <p className="font-semibold text-sm">{f.display_name}</p>
+              <div key={f.id || f.user_id} className="card flex justify-between items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <img src={f.avatar_url || '/assets/avatars/default_01.svg'} alt="" className="w-10 h-10 rounded-full object-cover border border-mob-border bg-mob-bg flex-shrink-0" />
+                  <div className="min-w-0">
+                  <PlayerLink userId={f.user_id} name={f.display_name} className="font-semibold text-sm" />
                   <p className="text-xs text-gray-400">Lv.{f.level} · {f.respect} respect</p>
+                  </div>
                 </div>
                 <button className="btn-secondary text-xs" onClick={() => removeFriend(f.id || f.friend_id || f.user_id)}>Remove</button>
               </div>

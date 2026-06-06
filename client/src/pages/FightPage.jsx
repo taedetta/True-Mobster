@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { api, formatMoney } from '../api';
 import FightResultModal from '../components/FightResultModal';
+import PlayerLink from '../components/PlayerLink';
 
 const STAMINA_COST = 1;
 
@@ -78,12 +79,15 @@ export default function FightPage() {
 
     return (
       <div key={t.user_id} className="card flex items-center gap-3">
-        <Link to={`/player/${t.user_id}`} className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-900 to-black flex items-center justify-center overflow-hidden flex-shrink-0">
-          <span className="text-lg">{t.is_bot ? '🤖' : '👤'}</span>
+        <Link to={`/player/${t.user_id}`} className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border border-mob-border bg-mob-bg">
+          <img
+            src={t.avatar_url || '/assets/avatars/default_01.svg'}
+            alt=""
+            className="w-full h-full object-cover"
+          />
         </Link>
         <div className="flex-1 min-w-0">
-          <Link to={`/player/${t.user_id}`} className="font-semibold text-sm hover:text-mob-gold">{t.display_name}</Link>
-          {t.is_bot && <span className="text-xs text-gray-500"> (Bot)</span>}
+          <PlayerLink userId={t.user_id} name={t.display_name} className="font-semibold text-sm" />
           <p className="text-xs text-gray-400">Lv.{t.level} · {t.respect || 0} respect · Mob {t.effective_mob || t.mob_size}</p>
           <p className={`text-xs ${targetHospitalized ? 'text-red-500 font-bold' : 'text-red-400'}`}>
             {targetHospitalized ? '🏥 Hospitalized' : `HP ${t.health}/${t.max_health || 100}`}
@@ -184,8 +188,9 @@ export default function FightPage() {
               onClick={() => openHistoryReport(h)}
             >
               <div className="flex justify-between items-start gap-2">
-                <p className={h.playerWon ? 'text-green-400' : 'text-red-400'}>
-                  {h.playerWon ? 'Won' : 'Lost'} vs {h.opponent_name || 'Unknown'}
+                <p className={`${h.playerWon ? 'text-green-400' : 'text-red-400'} flex items-center gap-1 flex-wrap`}>
+                  <span>{h.playerWon ? 'Won' : 'Lost'} vs</span>
+                  <PlayerLink userId={h.opponent_id} name={h.opponent_name || 'Unknown'} className="font-semibold" />
                 </p>
               </div>
               <p className="text-xs text-gray-500 mt-1">{new Date(h.created_at).toLocaleString()}</p>
